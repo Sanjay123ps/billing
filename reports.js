@@ -56,6 +56,11 @@ function renderBillsTable(list) {
       <td>—</td>
       <td><span style="font-size:12px;padding:3px 10px;border-radius:20px;background:${payBg(b.payment_mode)};color:${payColor(b.payment_mode)};border:1px solid ${payBorder(b.payment_mode)}">${b.payment_mode}</span></td>
       <td style="font-weight:700;color:#3B6D11">₹${parseFloat(b.total||0).toFixed(2)}</td>
+      <td>
+        <button onclick="deleteBill(${b.id}, ${b.bill_no})" title="Delete bill" style="background:none;border:none;cursor:pointer;padding:5px;border-radius:4px;color:#A32D2D;transition:background 0.15s" onmouseover="this.style.background='#FCEBEB'" onmouseout="this.style.background='none'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </td>
     </tr>`).join('');
 }
 
@@ -81,6 +86,21 @@ function payBg(p)     { return p==='Cash'?'#f2fae6':p==='UPI'?'#E1F5EE':p==='Car
 function payColor(p)  { return p==='Cash'?'#3B6D11':p==='UPI'?'#0F6E56':p==='Card'?'#BA7517':'#A32D2D'; }
 function payBorder(p) { return p==='Cash'?'#c0dd97':p==='UPI'?'#9FE1CB':p==='Card'?'#FAC775':'#f5bcbc'; }
 
+
+async function deleteBill(id, billNo) {
+  if (!confirm('Delete Bill #' + String(billNo).padStart(3,'0') + '? This cannot be undone.')) return;
+  try {
+    await Bills.delete(id);
+    allBills = allBills.filter(b => b.id !== id);
+    filterBills();
+    // Refresh stats
+    const summary = await Reports.summary();
+    renderStats(summary);
+    showToast('Bill #' + String(billNo).padStart(3,"0") + ' deleted');
+  } catch(e) {
+    showToast('Error deleting bill: ' + e.message);
+  }
+}
 document.addEventListener('DOMContentLoaded', init);
 
 async function exportToExcel() {
