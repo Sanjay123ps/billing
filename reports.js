@@ -1,83 +1,84 @@
-const router = require('express').Router();
-const { query, get } = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+// ===== REPORTS PAGE JS — API VERSION =====
+let allBills = [];
 
-// GET /api/reports/summary  — overall totals
-router.get('/summary', authMiddleware, (req, res) => {
-  const totals     = get("SELECT COUNT(*) as bill_count, SUM(total) as revenue, AVG(total) as avg_bill FROM bills");
-  const today      = new Date().toLocaleDateString('en-IN');
-  // Use SQLite date to match created_at
-  const todayData  = get("SELECT COUNT(*) as count, COALESCE(SUM(total),0) as revenue FROM bills WHERE date(created_at)=date('now','localtime')");
-  const stockStats = get("SELECT COUNT(*) as total, SUM(CASE WHEN stock=0 THEN 1 ELSE 0 END) as out_of_stock, SUM(CASE WHEN stock>0 AND stock<=10 THEN 1 ELSE 0 END) as low_stock, SUM(price*stock) as stock_value FROM products");
+async function init() {
+  requireAuth();
+  try {
+    const [summary, bills, topProds] = await Promise.all([
+      Reports.summary(),
+      Bills.getAll({ limit: 200 }),
+      Reports.topProducts(8)
+    ]);
+    allBills = bills;
+    renderStats(summary);
+    renderBillsTable(allBills);
+    renderTopProducts(topProds);
+  } catch(e) {
+    showToast('Error loading reports');
+  }
+}
 
-  res.json({
-    all_time: {
-      bill_count: totals?.bill_count || 0,
-      revenue:    parseFloat((totals?.revenue || 0).toFixed(2)),
-      avg_bill:   parseFloat((totals?.avg_bill || 0).toFixed(2)),
-    },
-    today: {
-      bill_count: todayData?.count || 0,
-      revenue:    parseFloat((todayData?.revenue || 0).toFixed(2)),
-    },
-    inventory: {
-      total_products: stockStats?.total || 0,
-      out_of_stock:   stockStats?.out_of_stock || 0,
-      low_stock:      stockStats?.low_stock || 0,
-      stock_value:    parseFloat((stockStats?.stock_value || 0).toFixed(2)),
-    }
-  });
-});
+function renderStats(summary) {
+  if (!summary) return;
+  document.getElementById('reportStats').innerHTML = `
+    <div class="stat-card stat-green"><div class="stat-label">Total Bills</div><div class="stat-value">${summary.all_time.bill_count}</div><div class="stat-sub">All time</div></div>
+    <div class="stat-card stat-teal"><div class="stat-label">Total Revenue</div><div class="stat-value">₹${summary.all_time.revenue.toFixed(0)}</div><div class="stat-sub">All time earnings</div></div>
+    <div class="stat-card stat-amber"><div class="stat-label">Today's Sales</div><div class="stat-value">₹${summary.today.revenue.toFixed(0)}</div><div class="stat-sub">${summary.today.bill_count} bills today</div></div>
+    <div class="stat-card stat-green"><div class="stat-label">Avg Bill Value</div><div class="stat-value">₹${summary.all_time.avg_bill.toFixed(0)}</div><div class="stat-sub">Per transaction</div></div>`;
+}
 
-// GET /api/reports/daily?days=30  — daily revenue for chart
-router.get('/daily', authMiddleware, (req, res) => {
-  const days = parseInt(req.query.days) || 30;
-  const rows = query(
-    `SELECT date(created_at,'localtime') as day,
-            COUNT(*) as bills,
-            ROUND(SUM(total),2) as revenue
-     FROM bills
-     WHERE created_at >= datetime('now','localtime','-${days} days')
-     GROUP BY day
-     ORDER BY day ASC`
-  );
-  res.json(rows);
-});
+async function filterBills() {
+  const q   = document.getElementById('billSearch').value.toLowerCase();
+  const pay = document.getElementById('payFilter').value;
+  let list  = allBills;
+  if (q)   list = list.filter(b => (b.customer||'').toLowerCase().includes(q) || String(b.bill_no).includes(q));
+  if (pay) list = list.filter(b => b.payment_mode === pay);
+  renderBillsTable(list);
+}
 
-// GET /api/reports/top-products?limit=10
-router.get('/top-products', authMiddleware, (req, res) => {
-  const limit = parseInt(req.query.limit) || 10;
-  const rows = query(
-    `SELECT name, SUM(qty) as total_qty, SUM(total) as total_revenue
-     FROM bill_items
-     GROUP BY name
-     ORDER BY total_qty DESC
-     LIMIT ?`,
-    [limit]
-  );
-  res.json(rows);
-});
+function renderBillsTable(list) {
+  const tbody = document.getElementById('billsBody');
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:#8a8580;font-size:13px">No bills found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(b => `
+    <tr>
+      <td><span style="font-weight:600;color:#3B6D11">#${String(b.bill_no).padStart(3,'0')}</span></td>
+      <td>
+        <div style="font-weight:500">${b.customer}</div>
+        ${b.mobile ? `<div style="font-size:11px;color:#8a8580">${b.mobile}</div>` : ''}
+      </td>
+      <td>
+        <div>${b.created_at ? new Date(b.created_at).toLocaleDateString('en-IN') : '—'}</div>
+        ${b.created_at ? `<div style="font-size:11px;color:#8a8580">${new Date(b.created_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+      </td>
+      <td>—</td>
+      <td><span style="font-size:12px;padding:3px 10px;border-radius:20px;background:${payBg(b.payment_mode)};color:${payColor(b.payment_mode)};border:1px solid ${payBorder(b.payment_mode)}">${b.payment_mode}</span></td>
+      <td style="font-weight:700;color:#3B6D11">₹${parseFloat(b.total||0).toFixed(2)}</td>
+    </tr>`).join('');
+}
 
-// GET /api/reports/payment-breakdown
-router.get('/payment-breakdown', authMiddleware, (req, res) => {
-  const rows = query(
-    `SELECT payment_mode, COUNT(*) as count, ROUND(SUM(total),2) as revenue
-     FROM bills GROUP BY payment_mode ORDER BY count DESC`
-  );
-  res.json(rows);
-});
+function renderTopProducts(list) {
+  const container = document.getElementById('topProducts');
+  if (!list || list.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:#8a8580;font-size:13px">No sales data yet</div>`;
+    return;
+  }
+  const max = list[0]?.total_qty || 1;
+  container.innerHTML = list.map((p, i) => `
+    <div class="top-product-row">
+      <div class="tp-rank">${i+1}</div>
+      <div>
+        <div class="tp-name">${p.name}</div>
+        <div class="tp-sold">${p.total_qty} units · ₹${parseFloat(p.total_revenue).toFixed(0)}</div>
+      </div>
+      <div class="tp-bar"><div class="tp-bar-fill" style="width:${Math.round(p.total_qty/max*100)}%"></div></div>
+    </div>`).join('');
+}
 
-// GET /api/reports/category-sales
-router.get('/category-sales', authMiddleware, (req, res) => {
-  const rows = query(
-    `SELECT p.category, SUM(bi.qty) as total_qty, ROUND(SUM(bi.total),2) as revenue
-     FROM bill_items bi
-     LEFT JOIN products p ON bi.product_id = p.id
-     WHERE p.category IS NOT NULL
-     GROUP BY p.category
-     ORDER BY revenue DESC`
-  );
-  res.json(rows);
-});
+function payBg(p)     { return p==='Cash'?'#f2fae6':p==='UPI'?'#E1F5EE':p==='Card'?'#faf0e6':'#FCEBEB'; }
+function payColor(p)  { return p==='Cash'?'#3B6D11':p==='UPI'?'#0F6E56':p==='Card'?'#BA7517':'#A32D2D'; }
+function payBorder(p) { return p==='Cash'?'#c0dd97':p==='UPI'?'#9FE1CB':p==='Card'?'#FAC775':'#f5bcbc'; }
 
-module.exports = router;
+document.addEventListener('DOMContentLoaded', init);
