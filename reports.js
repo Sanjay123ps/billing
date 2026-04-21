@@ -6,7 +6,7 @@ async function init() {
   try {
     const [summary, bills, topProds] = await Promise.all([
       Reports.summary(),
-      Bills.getAll({ limit: 200 }),
+      Bills.getAll({ limit: 99999 }),
       Reports.topProducts(8)
     ]);
     allBills = bills;
@@ -82,3 +82,73 @@ function payColor(p)  { return p==='Cash'?'#3B6D11':p==='UPI'?'#0F6E56':p==='Car
 function payBorder(p) { return p==='Cash'?'#c0dd97':p==='UPI'?'#9FE1CB':p==='Card'?'#FAC775':'#f5bcbc'; }
 
 document.addEventListener('DOMContentLoaded', init);
+
+async function exportToExcel() {
+  const btn = event.target.closest('button');
+  const orig = btn.innerHTML;
+  btn.textContent = 'Exporting...'; btn.disabled = true;
+
+  try {
+    // Fetch ALL bills with items
+    const bills = await Bills.getAll({ limit: 99999 });
+
+    // Build CSV content
+    const rows = [];
+
+    // Sheet 1: Bills Summary
+    rows.push(['AYINI HOME PRODUCTS - BILLS EXPORT']);
+    rows.push(['Generated on', new Date().toLocaleString('en-IN')]);
+    rows.push([]);
+    rows.push(['Bill #', 'Customer', 'Mobile', 'Date', 'Time', 'Payment Mode', 'Subtotal (₹)', 'GST Rate (%)', 'GST Amount (₹)', 'Discount (₹)', 'Total (₹)']);
+
+    bills.forEach(b => {
+      const dt = b.created_at ? new Date(b.created_at) : null;
+      rows.push([
+        '#' + String(b.bill_no).padStart(3, '0'),
+        b.customer || 'Walk-in Customer',
+        b.mobile || '',
+        dt ? dt.toLocaleDateString('en-IN') : '',
+        dt ? dt.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'}) : '',
+        b.payment_mode || '',
+        parseFloat(b.subtotal || 0).toFixed(2),
+        parseFloat(b.gst_rate || 0).toFixed(0),
+        parseFloat(b.gst_amount || 0).toFixed(2),
+        parseFloat(b.discount || 0).toFixed(2),
+        parseFloat(b.total || 0).toFixed(2),
+      ]);
+    });
+
+    // Summary row
+    rows.push([]);
+    const totalRevenue = bills.reduce((s, b) => s + parseFloat(b.total || 0), 0);
+    rows.push(['', '', '', '', '', 'TOTAL REVENUE', '', '', '', '', totalRevenue.toFixed(2)]);
+    rows.push(['Total Bills: ' + bills.length]);
+
+    // Convert to CSV
+    const csv = rows.map(row =>
+      row.map(cell => {
+        const val = String(cell ?? '');
+        return val.includes(',') || val.includes('"') || val.includes('\n')
+          ? '"' + val.replace(/"/g, '""') + '"'
+          : val;
+      }).join(',')
+    ).join('\n');
+
+    // Add BOM for Excel to read UTF-8 correctly (₹ symbol)
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const date = new Date().toLocaleDateString('en-IN').replace(/\//g, '-');
+    a.href     = url;
+    a.download = `Ayini_Bills_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showToast(`✓ Exported ${bills.length} bills to Excel!`);
+  } catch(e) {
+    showToast('Export failed: ' + e.message);
+  } finally {
+    btn.innerHTML = orig; btn.disabled = false;
+  }
+}
