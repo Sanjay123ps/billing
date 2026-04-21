@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reports — Ayini Home Products</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-leaf">🌿</span>
+      <span class="brand-text">Ayini <span>Home Products</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Billing</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="reports.html" class="nav-link active">Reports</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <span class="nav-date" id="navDate"></span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.6)" id="navUser"></span>
+      <a href="change-password.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;text-decoration:none">🔑 Password</a><button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Sales Reports</h1>
+      <p class="page-sub">Overview of all billing activity</p>
+    </div>
+    <button class="btn-primary" onclick="window.print()">Print Report</button>
+  </div>
+
+  <div class="stats-row" id="reportStats"></div>
+
+  <div class="reports-grid">
+    <div class="report-card">
+      <div class="report-card-title">Recent Bills</div>
+      <div class="table-toolbar" style="margin-bottom:12px">
+        <div class="search-box-wrap" style="max-width:260px">
+          <div class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+          <input type="text" class="search-input" id="billSearch" placeholder="Search bills..." oninput="filterBills()"/>
+        </div>
+        <select id="payFilter" class="select-sm" onchange="filterBills()">
+          <option value="">All Payments</option>
+          <option value="Cash">Cash</option>
+          <option value="UPI">UPI</option>
+          <option value="Card">Card</option>
+          <option value="Credit">Credit</option>
+        </select>
+      </div>
+      <div class="inv-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Bill #</th>
+              <th>Customer</th>
+              <th>Date</th>
+              <th>Items</th>
+              <th>Payment</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="billsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="report-card" style="max-width:320px">
+      <div class="report-card-title">Top Products Sold</div>
+      <div id="topProducts"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="api.js"></script>
+<script src="reports.js"></script>
+</body>
+</html>

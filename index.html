@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ayini Billing — Home Products</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-leaf">🌿</span>
+      <span class="brand-text">Ayini <span>Home Products</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link active">Billing</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="reports.html" class="nav-link">Reports</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <span class="nav-date" id="navDate"></span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.6)" id="navUser"></span>
+      <a href="change-password.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;text-decoration:none">🔑 Password</a><button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<main class="main-layout">
+  <aside class="product-sidebar">
+    <div class="sidebar-header">
+      <h2 class="sidebar-title">Add Products</h2>
+    </div>
+    <div class="sidebar-body">
+      <div class="quick-add-box">
+        <p class="field-label">Quick Select</p>
+        <div class="quick-row">
+          <select id="quickProduct" class="select-input"><option value="">Choose product...</option></select>
+          <input type="number" id="quickQty" class="qty-input" value="1" min="1"/>
+          <button class="btn-add" onclick="quickAdd()">Add</button>
+        </div>
+      </div>
+      <div class="search-box-wrap">
+        <div class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search by name or category..." oninput="filterProducts()"/>
+      </div>
+      <div class="cat-filters" id="catFilters"></div>
+      <div class="product-grid" id="productGrid"><div style="text-align:center;padding:2rem;color:#8a8580;font-size:13px">Loading products...</div></div>
+    </div>
+  </aside>
+
+  <section class="bill-section">
+    <div class="bill-card">
+      <div class="bill-top">
+        <div class="bill-brand-row">
+          <div class="bill-brand-info">
+            <div class="bill-co-name">Ayini Home Products</div>
+            <div class="bill-co-addr">Coimbatore, Tamil Nadu &nbsp;|&nbsp; +91 7397130039</div>
+          </div>
+          <div class="bill-meta">
+            <div class="bill-no" id="billNo">Bill #001</div>
+            <div class="bill-dt" id="billDt"></div>
+          </div>
+        </div>
+        <div class="customer-fields">
+          <div class="field-group">
+            <label class="field-label">Customer Name</label>
+            <input type="text" id="custName" class="text-input" placeholder="Enter customer name"/>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Mobile Number</label>
+            <input type="text" id="custMobile" class="text-input" placeholder="+91 XXXXX XXXXX" maxlength="13"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="bill-items-wrap">
+        <table class="bill-table">
+          <thead><tr>
+            <th class="col-name">Product</th>
+            <th class="col-price">Unit Price</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-total">Total</th>
+            <th class="col-del"></th>
+          </tr></thead>
+          <tbody id="billBody">
+            <tr><td colspan="5" class="empty-state">
+              <div class="empty-icon">🛒</div>
+              <div class="empty-text">No items added yet</div>
+              <div class="empty-sub">Search or select a product from the left panel</div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bill-footer">
+        <div class="bill-controls">
+          <div class="control-group">
+            <label class="field-label">GST Rate</label>
+            <select id="gstRate" class="select-sm" onchange="recalc()">
+              <option value="0">No GST (0%)</option>
+              <option value="5" selected>GST 5%</option>
+              <option value="12">GST 12%</option>
+              <option value="18">GST 18%</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="field-label">Payment Mode</label>
+            <select id="payMode" class="select-sm">
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="Card">Card</option>
+              <option value="Credit">Credit (Due)</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label class="field-label">Discount (₹)</label>
+            <input type="number" id="discount" class="select-sm" value="0" min="0" oninput="recalc()"/>
+          </div>
+        </div>
+        <div class="totals-panel">
+          <div class="total-row"><span>Subtotal</span><span id="subtotal">₹0.00</span></div>
+          <div class="total-row"><span id="gstLabel">GST (5%)</span><span id="gstAmt">₹0.00</span></div>
+          <div class="total-row discount-row"><span>Discount</span><span id="discAmt">– ₹0.00</span></div>
+          <div class="total-row grand"><span>Total Payable</span><span id="grandTotal">₹0.00</span></div>
+        </div>
+        <div class="action-bar">
+          <button class="action-btn btn-process" onclick="processPayment()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Process Payment
+          </button>
+          <button class="action-btn btn-print" onclick="printBill()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+          <button class="action-btn btn-whatsapp" onclick="sendWhatsApp()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+            WhatsApp
+          </button>
+          <button class="action-btn btn-reset" onclick="resetBill()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal-overlay" id="payModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title">Confirm Payment</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="receipt-preview" id="receiptPreview"></div>
+    <div class="modal-actions">
+      <button class="modal-btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn btn-confirm" id="confirmBtn" onclick="confirmPayment()">✓ Confirm & Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="api.js"></script>
+<script src="billing.js"></script>
+</body>
+</html>
