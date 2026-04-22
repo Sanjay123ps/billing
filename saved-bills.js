@@ -105,7 +105,7 @@ async function openBill(id) {
     // Populate items
     const items = bill.items || [];
     document.getElementById('popupItems').innerHTML = items.length === 0
-      ? '<tr><td colspan="4" style="text-align:center;color:#8a8580;padding:1rem">No item details available</td></tr>'
+      ? '<tr><td colspan="4" style="text-align:center;color:#8a8580;padding:1.5rem;font-size:12px;line-height:1.8">This old bill has no item records.<br><span style="color:#BA7517">New bills you create will show full item details.</span></td></tr>'
       : items.map(item => `
         <tr>
           <td style="font-weight:500">${item.name}</td>
