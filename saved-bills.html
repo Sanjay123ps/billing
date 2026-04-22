@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Saved Bills — Ayini Home Products</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+.bills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 1.5rem; }
+.bill-card-item {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 1.25rem;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+  position: relative; overflow: hidden;
+}
+.bill-card-item::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--green-500);
+}
+.bill-card-item:hover { border-color: var(--green-400); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.bill-card-no { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--green-800); }
+.bill-card-customer { font-size: 14px; font-weight: 500; color: var(--text-dark); margin-top: 6px; }
+.bill-card-mobile { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.bill-card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
+.bill-card-date { font-size: 11px; color: var(--text-muted); }
+.bill-card-amount { font-size: 16px; font-weight: 700; color: var(--green-700); }
+.bill-card-pay { font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-top: 4px; display: inline-block; }
+.bill-card-items { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+/* Bill Popup Modal */
+.bill-popup { max-width: 520px; width: 100%; }
+.bill-popup-header { background: linear-gradient(135deg, var(--green-800), var(--green-700)); padding: 1.5rem 2rem; border-radius: var(--radius-lg) var(--radius-lg) 0 0; color: #fff; }
+.bill-popup-co { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; }
+.bill-popup-addr { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+.bill-popup-meta { display: flex; justify-content: space-between; margin-top: 16px; }
+.bill-popup-meta-item label { font-size: 10px; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.06em; display: block; }
+.bill-popup-meta-item span { font-size: 13px; font-weight: 500; color: #fff; }
+.bill-popup-body { padding: 1.5rem; }
+.bill-popup-section { margin-bottom: 1.25rem; }
+.bill-popup-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.bill-items-table { width: 100%; border-collapse: collapse; }
+.bill-items-table th { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.bill-items-table td { padding: 9px 8px; border-bottom: 1px solid var(--border-light); font-size: 13px; color: var(--text-dark); }
+.bill-items-table tr:last-child td { border-bottom: none; }
+.bill-totals { background: var(--cream); border-radius: var(--radius); padding: 12px 14px; }
+.bill-total-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-mid); padding: 3px 0; }
+.bill-total-row.grand { font-size: 16px; font-weight: 700; color: var(--green-800); border-top: 1px dashed var(--border); margin-top: 8px; padding-top: 10px; }
+.bill-popup-actions { display: flex; gap: 10px; padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
+.popup-btn { flex: 1; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); background: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; transition: all 0.15s; color: var(--text-dark); }
+.popup-btn:hover { background: var(--cream); }
+.popup-btn.green { background: var(--green-700); color: #fff; border-color: var(--green-700); }
+.popup-btn.green:hover { background: var(--green-800); }
+.popup-btn.wa { background: #128C7E; color: #fff; border-color: #128C7E; }
+.popup-btn.wa:hover { background: #0f7469; }
+.popup-btn.red { color: var(--red-600); border-color: var(--red-100); }
+.popup-btn.red:hover { background: var(--red-100); }
+.empty-bills { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+.empty-bills-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+.empty-bills-text { font-size: 16px; font-weight: 500; color: var(--text-muted); }
+.empty-bills-sub { font-size: 13px; color: #b0ab9f; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-leaf">🌿</span>
+      <span class="brand-text">Ayini <span>Home Products</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Billing</a>
+      <a href="saved-bills.html" class="nav-link active">Saved Bills</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="reports.html" class="nav-link">Reports</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <span class="nav-date" id="navDate"></span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.6)" id="navUser"></span>
+      <a href="change-password.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;text-decoration:none">🔑 Password</a>
+      <button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Saved Bills</h1>
+      <p class="page-sub">Click any bill to view full details</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="search-box-wrap" style="max-width:240px">
+        <div class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+        <input type="text" id="billSearch" class="search-input" placeholder="Search customer, bill #..." oninput="filterBills()"/>
+      </div>
+      <select id="payFilter" class="select-sm" onchange="filterBills()">
+        <option value="">All Payments</option>
+        <option value="Cash">Cash</option>
+        <option value="UPI">UPI</option>
+        <option value="Card">Card</option>
+        <option value="Credit">Credit</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stats-row" id="billStats"></div>
+
+  <!-- Bills Grid -->
+  <div class="bills-grid" id="billsGrid">
+    <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">Loading bills...</div>
+  </div>
+</div>
+
+<!-- Bill Detail Popup -->
+<div class="modal-overlay" id="billPopup">
+  <div class="modal-box bill-popup" style="padding:0;overflow:hidden">
+    <div class="bill-popup-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="bill-popup-co">Ayini Home Products</div>
+          <div class="bill-popup-addr">Coimbatore, Tamil Nadu &nbsp;|&nbsp; +91 7397130039</div>
+        </div>
+        <button onclick="closePopup()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>
+      </div>
+      <div class="bill-popup-meta" id="popupMeta"></div>
+    </div>
+    <div class="bill-popup-body">
+      <div class="bill-popup-section">
+        <div class="bill-popup-section-title">Items Purchased</div>
+        <table class="bill-items-table">
+          <thead><tr><th>Product</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead>
+          <tbody id="popupItems"></tbody>
+        </table>
+      </div>
+      <div class="bill-popup-section">
+        <div class="bill-totals" id="popupTotals"></div>
+      </div>
+    </div>
+    <div class="bill-popup-actions">
+      <button class="popup-btn green" onclick="printPopupBill()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print
+      </button>
+      <button class="popup-btn wa" onclick="whatsappPopupBill()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+        WhatsApp
+      </button>
+      <button class="popup-btn red" onclick="deletePopupBill()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="api.js"></script>
+<script src="saved-bills.js"></script>
+</body>
+</html>

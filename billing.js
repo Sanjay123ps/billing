@@ -195,6 +195,15 @@ function buildReceiptText() {
 
 function processPayment() {
   if (billItems.length === 0) { showToast('Add products to the bill first'); return; }
+  // Step 1: Print the bill first
+  const txt = buildReceiptText().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const w = window.open('', '_blank', 'width=420,height=640');
+  w.document.write(`<!DOCTYPE html><html><head><title>Bill - Ayini</title>
+  <style>body{font-family:'Courier New',monospace;font-size:13px;padding:24px;line-height:1.7;color:#1c1a16;background:#fff;white-space:pre}</style>
+  </head><body>${txt}</body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 300);
+  // Step 2: Show confirm modal to save the bill
   document.getElementById('receiptPreview').textContent = buildReceiptText();
   document.getElementById('payModal').classList.add('open');
 }
