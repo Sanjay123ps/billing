@@ -74,6 +74,7 @@ function renderBillsGrid(list) {
 async function openBill(id) {
   try {
     const bill = await Bills.getById(id);
+    if (!bill) { showToast('Bill not found'); return; }
     currentPopupBill = bill;
 
     const dt = bill.created_at ? new Date(bill.created_at) : null;
