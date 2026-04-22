@@ -21,8 +21,8 @@ router.get('/', authMiddleware, (req, res) => {
 router.get('/:id', authMiddleware, (req, res) => {
   const bill = get("SELECT * FROM bills WHERE id = ?", [req.params.id]);
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
-  const items = query("SELECT * FROM bill_items WHERE bill_id = ?", [req.params.id]);
-  res.json({ ...bill, items });
+  const items = query("SELECT bi.*, bi.name as name, bi.price as price, bi.qty as qty, bi.total as total FROM bill_items bi WHERE bi.bill_id = ? ORDER BY bi.id ASC", [req.params.id]);
+  res.json({ ...bill, items: items || [] });
 });
 
 // POST /api/bills  — create new bill
