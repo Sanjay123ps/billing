@@ -16,8 +16,13 @@ async function init() {
 function renderStats() {
   const total   = allBills.length;
   const revenue = allBills.reduce((s, b) => s + parseFloat(b.total || 0), 0);
-  const today   = new Date().toLocaleDateString('en-IN');
-  const todayBills = allBills.filter(b => b.created_at && new Date(b.created_at).toLocaleDateString('en-IN') === today);
+  const todayStr   = new Date().toLocaleDateString('en-IN');
+  const todayBills = allBills.filter(b => {
+    if (!b.created_at) return false;
+    const [datePart] = b.created_at.split(' ');       // 'YYYY-MM-DD'
+    const [y, m, d]  = datePart.split('-');
+    return new Date(+y, +m - 1, +d).toLocaleDateString('en-IN') === todayStr;
+  });
   const cash    = allBills.filter(b => b.payment_mode === 'Cash').length;
   document.getElementById('billStats').innerHTML = `
     <div class="stat-card stat-green"><div class="stat-label">Total Bills</div><div class="stat-value">${total}</div><div class="stat-sub">All time</div></div>

@@ -4,7 +4,7 @@ const jwt     = require('jsonwebtoken');
 const { get, run } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'ayini_secret_2025';
+const JWT_SECRET  = process.env.JWT_SECRET  || 'ayini_billing_secret_2025';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h';
 
 // POST /api/auth/login

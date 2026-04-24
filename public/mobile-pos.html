@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Mobile POS — Ayini</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  body { margin: 0; padding: 0; overflow: hidden; }
+</style>
+</head>
+<body>
+
+<div class="mpos-wrap">
+
+  <!-- Header -->
+  <div class="mpos-header">
+    <div>
+      <div class="mpos-title">🌿 Ayini POS</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px" id="mposDate"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="mpos-billno" id="mposBillNo">Bill #001</div>
+      <button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.65);padding:5px 10px;border-radius:20px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif">Logout</button>
+    </div>
+  </div>
+
+  <!-- Customer strip -->
+  <div class="mpos-customer">
+    <input type="text" id="mposCustName" placeholder="Customer name (optional)"/>
+    <input type="text" id="mposCustMobile" placeholder="+91 mobile" maxlength="13" inputmode="numeric"/>
+  </div>
+
+  <!-- Body: search + products + cart -->
+  <div class="mpos-body">
+
+    <!-- Search + Categories -->
+    <div class="mpos-search-wrap">
+      <div class="mpos-search">
+        <input type="text" id="mposSearch" placeholder="Search products..." oninput="mposFilter()" autocomplete="off"/>
+        <button onclick="mposClearSearch()" style="background:var(--cream-dark);border:1px solid var(--border);border-radius:var(--radius);padding:0 12px;font-size:18px;color:var(--text-muted);cursor:pointer">×</button>
+      </div>
+      <div class="mpos-cats" id="mposCats"></div>
+    </div>
+
+    <!-- Product list -->
+    <div class="mpos-products" id="mposProducts">
+      <div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:13px">Loading products...</div>
+    </div>
+
+    <!-- Cart Panel -->
+    <div class="mpos-cart-panel" id="mposCartPanel">
+
+      <!-- Cart toggle header -->
+      <div class="mpos-cart-header" onclick="toggleCart()">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="mpos-cart-title">🛒 Cart</span>
+          <span class="mpos-cart-count" id="mposCartCount">0</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="mpos-cart-total-badge" id="mposCartBadge">₹0</span>
+          <svg id="mposChevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--green-700);transition:transform 0.2s"><polyline points="18 15 12 9 6 15"/></svg>
+        </div>
+      </div>
+
+      <!-- Cart items (shown when expanded) -->
+      <div class="mpos-cart-items" id="mposCartItems" style="display:none"></div>
+
+      <!-- Cart footer (always visible) -->
+      <div class="mpos-cart-footer">
+
+        <!-- Controls: GST, Payment, Discount -->
+        <div class="mpos-controls">
+          <div class="mpos-ctrl-group">
+            <label class="mpos-ctrl-label">GST</label>
+            <select id="mposGST" class="mpos-ctrl-select" onchange="mposRecalc()">
+              <option value="0">0%</option>
+              <option value="5">5%</option>
+              <option value="12">12%</option>
+              <option value="18">18%</option>
+            </select>
+          </div>
+          <div class="mpos-ctrl-group">
+            <label class="mpos-ctrl-label">Payment</label>
+            <select id="mposPayMode" class="mpos-ctrl-select">
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Card</option>
+              <option>Credit</option>
+            </select>
+          </div>
+          <div class="mpos-ctrl-group">
+            <label class="mpos-ctrl-label">Discount ₹</label>
+            <input type="number" id="mposDiscount" class="mpos-ctrl-input" value="0" min="0" oninput="mposRecalc()" inputmode="numeric"/>
+          </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="mpos-totals">
+          <div class="mpos-total-row"><span>Subtotal</span><span id="mposSubtotal">₹0.00</span></div>
+          <div class="mpos-total-row"><span id="mposGSTLabel">GST (0%)</span><span id="mposGSTAmt">₹0.00</span></div>
+          <div class="mpos-total-row" style="color:var(--amber-600)" id="mposDiscRow"><span>Discount</span><span id="mposDiscAmt">– ₹0.00</span></div>
+          <div class="mpos-total-row grand"><span>Total</span><span id="mposTotal">₹0.00</span></div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="mpos-actions">
+          <button class="mpos-btn mpos-btn-pay" onclick="mposCheckout()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Pay &amp; Save
+          </button>
+          <button class="mpos-btn mpos-btn-wa" onclick="mposWhatsApp()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+            WA
+          </button>
+          <button class="mpos-btn mpos-btn-reset" onclick="mposReset()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Checkout modal -->
+<div class="mpos-checkout-modal" id="mposModal">
+  <div class="mpos-checkout-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="mpos-checkout-title">Confirm Payment</div>
+      <button onclick="closeMposModal()" style="background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1">×</button>
+    </div>
+    <div class="mpos-receipt-pre" id="mposReceiptPre"></div>
+    <div class="mpos-checkout-btns">
+      <button class="mpos-co-btn mpos-co-cancel" onclick="closeMposModal()">Cancel</button>
+      <button class="mpos-co-btn mpos-co-confirm" id="mposConfirmBtn" onclick="mposConfirm()">✓ Confirm &amp; Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="api.js"></script>
+<script>
+// ===== STATE =====
+let mposAllProducts = [];
+let mposCart        = [];
+let mposActiveCat   = '';
+let mposBillNo      = 1;
+let mposCartOpen    = false;
+
+// ===== INIT =====
+async function mposInit() {
+  requireAuth();
+  document.getElementById('mposDate').textContent =
+    new Date().toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+
+  try {
+    mposAllProducts = await Products.getAll();
+    const summary   = await Reports.summary();
+    mposBillNo      = summary?.next_bill_no || 1;
+    document.getElementById('mposBillNo').textContent = `Bill #${String(mposBillNo).padStart(3,'0')}`;
+    mposRenderCats();
+    mposRenderProducts(mposAllProducts);
+  } catch(e) {
+    showToast('Failed to load products');
+  }
+}
+
+// ===== CATEGORIES =====
+function mposRenderCats() {
+  const cats = [...new Set(mposAllProducts.map(p => p.category))];
+  const wrap = document.getElementById('mposCats');
+  wrap.innerHTML =
+    `<span class="mpos-cat active" onclick="mposSetCat('')">All</span>` +
+    cats.map(c => `<span class="mpos-cat" onclick="mposSetCat('${c.replace(/'/g,"&#39;")}')">${c}</span>`).join('');
+}
+
+function mposSetCat(cat) {
+  mposActiveCat = cat;
+  document.querySelectorAll('.mpos-cat').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  mposFilter();
+}
+
+// ===== SEARCH & FILTER =====
+function mposFilter() {
+  const q = document.getElementById('mposSearch').value.toLowerCase();
+  let list = mposAllProducts;
+  if (mposActiveCat) list = list.filter(p => p.category === mposActiveCat);
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+  mposRenderProducts(list);
+}
+
+function mposClearSearch() {
+  document.getElementById('mposSearch').value = '';
+  mposFilter();
+}
+
+// ===== RENDER PRODUCTS =====
+function mposRenderProducts(list) {
+  const el = document.getElementById('mposProducts');
+  if (!list || list.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-muted);font-size:13px">No products found</div>`;
+    return;
+  }
+  el.innerHTML = list.map(p => {
+    const inCart = mposCart.find(x => x.id === p.id);
+    const stockCls = p.stock > 10 ? 's-ok' : p.stock > 0 ? 's-low' : 's-out';
+    const stockLbl = p.stock > 10 ? `${p.stock} in stock` : p.stock > 0 ? `Low: ${p.stock}` : 'Out of stock';
+    return `
+    <div class="mpos-product${p.stock <= 0 ? ' mpos-product-oos' : ''}" onclick="${p.stock > 0 ? `mposAddToCart(${p.id})` : 'void(0)'}">
+      <div class="mpos-prod-left">
+        <div class="mpos-prod-name">${p.name}${inCart ? ` <span style="color:var(--green-600);font-size:11px">×${inCart.qty}</span>` : ''}</div>
+        <div class="mpos-prod-cat">${p.category}</div>
+      </div>
+      <div class="mpos-prod-right">
+        <div class="mpos-prod-price">₹${p.price}</div>
+        <div class="mpos-prod-stock"><span class="stock-badge ${stockCls}">${stockLbl}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== CART =====
+function mposAddToCart(pid) {
+  const p = mposAllProducts.find(x => x.id === pid);
+  if (!p || p.stock <= 0) return;
+  const existing = mposCart.find(x => x.id === pid);
+  if (existing) {
+    if (existing.qty >= p.stock) { showToast(`Max stock: ${p.stock}`); return; }
+    existing.qty++;
+  } else {
+    mposCart.push({ id: p.id, name: p.name, price: p.price, stock: p.stock, category: p.category, qty: 1 });
+  }
+  // Auto-expand cart when first item added
+  if (mposCart.length === 1 && !mposCartOpen) toggleCart();
+  mposRenderCart();
+  mposRenderProducts(mposGetFilteredList());
+  mposRecalc();
+  // Light haptic if supported
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+
+function mposChangeQty(pid, delta) {
+  const item = mposCart.find(x => x.id === pid);
+  if (!item) return;
+  const newQty = item.qty + delta;
+  if (newQty < 1) {
+    mposCart = mposCart.filter(x => x.id !== pid);
+  } else if (newQty > item.stock) {
+    showToast(`Max stock: ${item.stock}`);
+    return;
+  } else {
+    item.qty = newQty;
+  }
+  mposRenderCart();
+  mposRenderProducts(mposGetFilteredList());
+  mposRecalc();
+}
+
+function mposGetFilteredList() {
+  const q = document.getElementById('mposSearch').value.toLowerCase();
+  let list = mposAllProducts;
+  if (mposActiveCat) list = list.filter(p => p.category === mposActiveCat);
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q));
+  return list;
+}
+
+function mposRenderCart() {
+  const countEl = document.getElementById('mposCartCount');
+  const itemsEl = document.getElementById('mposCartItems');
+  const totalItems = mposCart.reduce((s, i) => s + i.qty, 0);
+  countEl.textContent = totalItems;
+
+  if (mposCart.length === 0) {
+    itemsEl.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:13px">Cart is empty</div>`;
+    return;
+  }
+  itemsEl.innerHTML = mposCart.map(item => `
+    <div class="mpos-cart-item">
+      <div class="mpos-ci-name">
+        ${item.name}
+        <span>₹${item.price} × ${item.qty} = <strong style="color:var(--green-700)">₹${(item.price * item.qty).toFixed(2)}</strong></span>
+      </div>
+      <div class="mpos-ci-qty">
+        <button class="mpos-qty-btn" onclick="mposChangeQty(${item.id}, -1)">−</button>
+        <span class="mpos-ci-qty-num">${item.qty}</span>
+        <button class="mpos-qty-btn" onclick="mposChangeQty(${item.id}, 1)">+</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleCart() {
+  mposCartOpen = !mposCartOpen;
+  const itemsEl   = document.getElementById('mposCartItems');
+  const chevron   = document.getElementById('mposChevron');
+  itemsEl.style.display   = mposCartOpen ? 'block' : 'none';
+  chevron.style.transform = mposCartOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// ===== RECALC =====
+function mposRecalc() {
+  const sub    = mposCart.reduce((s, i) => s + i.price * i.qty, 0);
+  const gst    = parseFloat(document.getElementById('mposGST').value) || 0;
+  const disc   = parseFloat(document.getElementById('mposDiscount').value) || 0;
+  const gstAmt = sub * gst / 100;
+  const total  = Math.max(0, sub + gstAmt - disc);
+
+  document.getElementById('mposSubtotal').textContent  = `₹${sub.toFixed(2)}`;
+  document.getElementById('mposGSTLabel').textContent  = `GST (${gst}%)`;
+  document.getElementById('mposGSTAmt').textContent    = `₹${gstAmt.toFixed(2)}`;
+  document.getElementById('mposDiscAmt').textContent   = `– ₹${disc.toFixed(2)}`;
+  document.getElementById('mposTotal').textContent     = `₹${total.toFixed(2)}`;
+  document.getElementById('mposCartBadge').textContent = `₹${total.toFixed(0)}`;
+  document.getElementById('mposDiscRow').style.display = disc > 0 ? 'flex' : 'none';
+}
+
+// ===== BUILD RECEIPT =====
+function mposBuildReceipt() {
+  const custName   = document.getElementById('mposCustName').value   || 'Walk-in Customer';
+  const custMobile = document.getElementById('mposCustMobile').value || '—';
+  const gst    = parseFloat(document.getElementById('mposGST').value) || 0;
+  const disc   = parseFloat(document.getElementById('mposDiscount').value) || 0;
+  const mode   = document.getElementById('mposPayMode').value;
+  const sub    = mposCart.reduce((s, i) => s + i.price * i.qty, 0);
+  const gstAmt = sub * gst / 100;
+  const total  = Math.max(0, sub + gstAmt - disc);
+  const now    = new Date();
+  const sep    = '─'.repeat(36);
+  let lines = [
+    '      AYINI HOME PRODUCTS',
+    '    Coimbatore, Tamil Nadu',
+    '      +91 7397130039',
+    sep,
+    `Bill No  : #${String(mposBillNo).padStart(3,'0')}`,
+    `Date     : ${now.toLocaleDateString('en-IN')}`,
+    `Time     : ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`,
+    `Customer : ${custName}`,
+    `Mobile   : ${custMobile}`,
+    `Payment  : ${mode}`,
+    sep,
+    'Product                   Qty   Amount',
+    sep,
+  ];
+  mposCart.forEach(item => {
+    const nm  = (item.name.length > 22 ? item.name.substring(0,20)+'..' : item.name).padEnd(22);
+    const amt = `₹${(item.price * item.qty).toFixed(2)}`;
+    lines.push(`${nm}  ${String(item.qty).padStart(3)}  ${amt.padStart(7)}`);
+  });
+  lines.push(sep);
+  lines.push(`Subtotal          : ₹${sub.toFixed(2)}`);
+  if (gst > 0)  lines.push(`GST (${gst}%)          : ₹${gstAmt.toFixed(2)}`);
+  if (disc > 0) lines.push(`Discount          : -₹${disc.toFixed(2)}`);
+  lines.push(`TOTAL PAYABLE     : ₹${total.toFixed(2)}`);
+  lines.push(sep);
+  lines.push('  Thank you for shopping with us!');
+  lines.push('  Ayini — Pure. Natural. Homemade.');
+  return lines.join('\n');
+}
+
+// ===== CHECKOUT =====
+function mposCheckout() {
+  if (mposCart.length === 0) { showToast('Add products first'); return; }
+  const receipt = mposBuildReceipt();
+  document.getElementById('mposReceiptPre').textContent = receipt;
+  document.getElementById('mposModal').classList.add('open');
+}
+
+function closeMposModal() {
+  document.getElementById('mposModal').classList.remove('open');
+}
+
+async function mposConfirm() {
+  const btn    = document.getElementById('mposConfirmBtn');
+  const gst    = parseFloat(document.getElementById('mposGST').value) || 0;
+  const disc   = parseFloat(document.getElementById('mposDiscount').value) || 0;
+  const mode   = document.getElementById('mposPayMode').value;
+  const sub    = mposCart.reduce((s, i) => s + i.price * i.qty, 0);
+  const gstAmt = sub * gst / 100;
+  const total  = Math.max(0, sub + gstAmt - disc);
+
+  btn.textContent = 'Saving...'; btn.disabled = true;
+  try {
+    await Bills.create({
+      customer:     document.getElementById('mposCustName').value   || 'Walk-in Customer',
+      mobile:       document.getElementById('mposCustMobile').value || '',
+      payment_mode: mode,
+      gst_rate:     gst,
+      subtotal:     sub,
+      gst_amount:   gstAmt,
+      discount:     disc,
+      total:        total,
+      items: mposCart.map(i => ({ product_id: i.id, name: i.name, price: i.price, qty: i.qty, total: i.price * i.qty }))
+    });
+
+    // Print receipt
+    const txt = mposBuildReceipt().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const w = window.open('','_blank','width=400,height=600');
+    if (w) {
+      w.document.write(`<!DOCTYPE html><html><head><title>Bill - Ayini</title>
+      <style>body{font-family:'Courier New',monospace;font-size:13px;padding:24px;line-height:1.7;color:#1c1a16;white-space:pre}</style>
+      </head><body>${txt}</body></html>`);
+      w.document.close();
+      setTimeout(() => w.print(), 300);
+    }
+
+    mposAllProducts = await Products.getAll();
+    mposBillNo++;
+    document.getElementById('mposBillNo').textContent = `Bill #${String(mposBillNo).padStart(3,'0')}`;
+    closeMposModal();
+    mposReset();
+    showToast('✓ Bill saved!');
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  } finally {
+    btn.textContent = '✓ Confirm & Save'; btn.disabled = false;
+  }
+}
+
+// ===== WHATSAPP =====
+function mposWhatsApp() {
+  if (mposCart.length === 0) { showToast('Add products first'); return; }
+  const mobile = document.getElementById('mposCustMobile').value.replace(/\D/g,'');
+  if (!mobile || mobile.length < 10) { showToast('Enter customer mobile first'); return; }
+  const num = mobile.startsWith('91') ? mobile : '91' + mobile;
+  const msg = encodeURIComponent(mposBuildReceipt());
+  window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+}
+
+// ===== RESET =====
+function mposReset() {
+  mposCart = [];
+  document.getElementById('mposCustName').value   = '';
+  document.getElementById('mposCustMobile').value = '';
+  document.getElementById('mposDiscount').value   = 0;
+  document.getElementById('mposGST').value        = '0';
+  document.getElementById('mposPayMode').value    = 'Cash';
+  if (mposCartOpen) toggleCart();
+  mposRenderCart();
+  mposRenderProducts(mposAllProducts);
+  mposRecalc();
+}
+
+document.addEventListener('DOMContentLoaded', mposInit);
+</script>
+</body>
+</html>

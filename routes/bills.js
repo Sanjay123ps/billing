@@ -21,7 +21,7 @@ router.get('/', authMiddleware, (req, res) => {
 router.get('/:id', authMiddleware, (req, res) => {
   const bill = get("SELECT * FROM bills WHERE id = ?", [req.params.id]);
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
-  const items = query("SELECT bi.*, bi.name as name, bi.price as price, bi.qty as qty, bi.total as total FROM bill_items bi WHERE bi.bill_id = ? ORDER BY bi.id ASC", [req.params.id]);
+  const items = query("SELECT * FROM bill_items WHERE bill_id = ? ORDER BY id ASC", [req.params.id]);
   res.json({ ...bill, items: items || [] });
 });
 
@@ -36,14 +36,17 @@ router.post('/', authMiddleware, (req, res) => {
   run("UPDATE bill_counter SET count = count + 1 WHERE id = 1");
 
   // Insert bill
-  const result = run(
+  run(
     `INSERT INTO bills (bill_no, customer, mobile, payment_mode, subtotal, gst_rate, gst_amount, discount, total)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [bill_no, customer||'Walk-in Customer', mobile||'', payment_mode||'Cash',
      parseFloat(subtotal)||0, parseFloat(gst_rate)||0,
      parseFloat(gst_amount)||0, parseFloat(discount)||0, parseFloat(total)||0]
   );
-  const bill_id = result.lastInsertRowid;
+  // Fetch the bill ID directly — more reliable than last_insert_rowid() with sql.js
+  const insertedBill = get('SELECT id FROM bills WHERE bill_no = ? ORDER BY id DESC LIMIT 1', [bill_no]);
+  const bill_id = insertedBill?.id;
+  if (!bill_id) return res.status(500).json({ error: 'Failed to retrieve bill after insert' });
 
   // Insert items & deduct stock
   const itemStmt = "INSERT INTO bill_items (bill_id, product_id, name, price, qty, total) VALUES (?, ?, ?, ?, ?, ?)";

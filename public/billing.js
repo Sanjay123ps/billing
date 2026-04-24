@@ -11,9 +11,9 @@ async function init() {
     populateQuickSelect();
     renderCatFilters();
     renderProducts(allProducts);
-    // Get bill number from reports summary
+    // Get bill number from the DB counter (accurate even after deletions)
     const summary = await Reports.summary();
-    currentBillNo = (summary?.all_time?.bill_count || 0) + 1;
+    currentBillNo = summary?.next_bill_no || 1;
     document.getElementById('billNo').textContent = `Bill #${String(currentBillNo).padStart(3,'0')}`;
     document.getElementById('billDt').textContent = new Date().toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'});
   } catch(e) {

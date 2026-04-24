@@ -5,12 +5,14 @@ const { authMiddleware } = require('../middleware/auth');
 // GET /api/reports/summary  — overall totals
 router.get('/summary', authMiddleware, (req, res) => {
   const totals     = get("SELECT COUNT(*) as bill_count, SUM(total) as revenue, AVG(total) as avg_bill FROM bills");
-  const today      = new Date().toLocaleDateString('en-IN');
+  const ctr        = get("SELECT count FROM bill_counter WHERE id=1");
+  const next_bill_no = ctr ? ctr.count : 1;
   // Use SQLite date to match created_at
-  const todayData  = get("SELECT COUNT(*) as count, COALESCE(SUM(total),0) as revenue FROM bills WHERE date(created_at)=date('now','localtime')");
+  const todayData  = get("SELECT COUNT(*) as count, COALESCE(SUM(total),0) as revenue FROM bills WHERE date(created_at,'localtime')=date('now','localtime')");
   const stockStats = get("SELECT COUNT(*) as total, SUM(CASE WHEN stock=0 THEN 1 ELSE 0 END) as out_of_stock, SUM(CASE WHEN stock>0 AND stock<=10 THEN 1 ELSE 0 END) as low_stock, SUM(price*stock) as stock_value FROM products");
 
   res.json({
+    next_bill_no,
     all_time: {
       bill_count: totals?.bill_count || 0,
       revenue:    parseFloat((totals?.revenue || 0).toFixed(2)),
@@ -37,7 +39,7 @@ router.get('/daily', authMiddleware, (req, res) => {
             COUNT(*) as bills,
             ROUND(SUM(total),2) as revenue
      FROM bills
-     WHERE created_at >= datetime('now','localtime','-${days} days')
+     WHERE date(created_at,'localtime') >= date('now','localtime','-${days} days')
      GROUP BY day
      ORDER BY day ASC`
   );
