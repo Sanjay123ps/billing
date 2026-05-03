@@ -101,12 +101,16 @@
         <div class="bill-controls">
           <div class="control-group">
             <label class="field-label">GST Rate</label>
-            <select id="gstRate" class="select-sm" onchange="recalc()">
+            <select id="gstRate" class="select-sm" onchange="handleGstChange()">
               <option value="0" selected>No GST (0%)</option>
               <option value="5">GST 5%</option>
               <option value="12">GST 12%</option>
               <option value="18">GST 18%</option>
+              <option value="custom">Custom %</option>
             </select>
+            <input type="number" id="customGst" class="select-sm" placeholder="Enter %" min="0" max="100" step="0.1"
+              style="display:none;margin-top:6px;width:100%"
+              oninput="recalc()"/>
           </div>
           <div class="control-group">
             <label class="field-label">Payment Mode</label>
@@ -188,5 +192,43 @@
 </nav>
 <script src="api.js"></script>
 <script src="billing.js"></script>
+<script>
+function handleGstChange() {
+  const sel = document.getElementById('gstRate');
+  const customInput = document.getElementById('customGst');
+  if (sel.value === 'custom') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
+  recalc();
+}
+
+// Keep a reference to the original recalc from billing.js
+const _origRecalc = recalc;
+
+recalc = function() {
+  const sel = document.getElementById('gstRate');
+  const customInput = document.getElementById('customGst');
+  const gstLabel = document.getElementById('gstLabel');
+
+  if (sel.value === 'custom') {
+    const rate = parseFloat(customInput.value) || 0;
+    // Temporarily set to numeric value so billing.js reads it correctly
+    sel.value = rate;
+    _origRecalc();
+    // Restore to "custom" so the dropdown stays on Custom %
+    sel.value = 'custom';
+    // Update label manually
+    if (gstLabel) gstLabel.textContent = rate > 0 ? `GST (${rate}%)` : 'GST (0%)';
+  } else {
+    const rate = parseFloat(sel.value) || 0;
+    _origRecalc();
+    // Fix the static label bug for preset rates too
+    if (gstLabel) gstLabel.textContent = rate > 0 ? `GST (${rate}%)` : 'GST (0%)';
+  }
+};
+</script>
 </body>
 </html>
