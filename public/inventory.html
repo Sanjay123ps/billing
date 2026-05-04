@@ -41,6 +41,11 @@
 
   <div class="stats-row" id="invStats"></div>
 
+  <!-- Low Stock Alert Banner -->
+  <div id="lowStockBanner" style="display:none;background:#fff8e1;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;margin-bottom:1rem;font-size:13px;color:#7d5a00;line-height:1.6">
+    <strong>⚠️ Stock Alert — </strong><span id="lowStockMsg"></span>
+  </div>
+
   <div class="table-toolbar">
     <div class="search-box-wrap" style="max-width:320px">
       <div class="search-icon">
@@ -114,6 +119,14 @@
             <option value="pack">Pack</option>
             <option value="bar">Bar</option>
             <option value="kg">Kg</option>
+            <option value="g">Grams (g)</option>
+            <option value="ml">Millilitres (ml)</option>
+            <option value="l">Litres (L)</option>
+            <option value="piece">Piece</option>
+            <option value="dozen">Dozen</option>
+            <option value="box">Box</option>
+            <option value="pouch">Pouch</option>
+            <option value="sachet">Sachet</option>
           </select>
         </div>
       </div>
@@ -159,5 +172,29 @@
 
 <script src="api.js"></script>
 <script src="inventory.js"></script>
+<script>
+// Low Stock Alert — runs after inventory.js loads products
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(async () => {
+    try {
+      const products = await Products.getAll();
+      const outStock = products.filter(p => p.stock === 0);
+      const lowStock = products.filter(p => p.stock > 0 && p.stock <= 10);
+      const banner   = document.getElementById('lowStockBanner');
+      const msgEl    = document.getElementById('lowStockMsg');
+      if (!banner || !msgEl) return;
+      const parts = [];
+      if (outStock.length > 0)
+        parts.push(`<span style="color:#dc3545;font-weight:600">${outStock.length} out of stock:</span> ${outStock.map(p => p.name).join(', ')}`);
+      if (lowStock.length > 0)
+        parts.push(`<span style="font-weight:600">${lowStock.length} running low:</span> ${lowStock.map(p => `${p.name} (${p.stock} left)`).join(', ')}`);
+      if (parts.length > 0) {
+        msgEl.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+        banner.style.display = 'block';
+      }
+    } catch (e) { /* silent fail */ }
+  }, 800);
+});
+</script>
 </body>
 </html>

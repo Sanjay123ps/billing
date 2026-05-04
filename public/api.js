@@ -78,6 +78,20 @@ function stockClass(s) { return s > 10 ? 's-ok' : s > 0 ? 's-low' : 's-out'; }
 function stockLabel(s) { return s > 10 ? `${s} in stock` : s > 0 ? `Low: ${s}` : 'Out of stock'; }
 function fmt(n)        { return '₹' + parseFloat(n||0).toFixed(2); }
 
+// Convert UTC DB timestamp → IST display string (fixes Railway UTC vs India time bug)
+function toIST(utcStr, opts = {}) {
+  if (!utcStr) return '—';
+  const d = new Date(utcStr);
+  const defaults = { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+  return d.toLocaleString('en-IN', { ...defaults, ...opts });
+}
+function toISTDate(utcStr) {
+  return toIST(utcStr, { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' });
+}
+function toISTTime(utcStr) {
+  return toIST(utcStr, { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+}
+
 function showToast(msg, duration = 2500) {
   const t = document.getElementById('toast');
   if (!t) return;

@@ -15,7 +15,7 @@ async function init() {
     const summary = await Reports.summary();
     currentBillNo = summary?.next_bill_no || 1;
     document.getElementById('billNo').textContent = `Bill #${String(currentBillNo).padStart(3,'0')}`;
-    document.getElementById('billDt').textContent = new Date().toLocaleDateString('en-IN', {day:'numeric',month:'long',year:'numeric'});
+    document.getElementById('billDt').textContent = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day:'numeric', month:'long', year:'numeric' });
   } catch(e) {
     showToast('Failed to load products');
   }
@@ -140,27 +140,58 @@ function renderBill() {
 
 function recalc() {
   const sub    = billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const gst    = parseFloat(document.getElementById('gstRate').value);
-  const disc   = parseFloat(document.getElementById('discount').value) || 0;
+  const gst    = parseFloat(document.getElementById('gstRate').value) || 0;
+  const discEl = document.getElementById('discount');
+  let disc     = parseFloat(discEl?.value) || 0;
+
+  // Cap discount — can't exceed subtotal
+  if (disc > sub) { disc = sub; if (discEl) discEl.value = sub.toFixed(2); }
+  if (disc < 0)   { disc = 0;   if (discEl) discEl.value = 0; }
+
   const gstAmt = sub * gst / 100;
+  const cgst   = gstAmt / 2;
+  const sgst   = gstAmt / 2;
   const total  = Math.max(0, sub + gstAmt - disc);
+
   document.getElementById('subtotal').textContent   = fmt(sub);
-  document.getElementById('gstLabel').textContent   = `GST (${gst}%)`;
+  document.getElementById('gstLabel').textContent   = gst > 0 ? `GST (${gst}%)` : 'GST (0%)';
   document.getElementById('gstAmt').textContent     = fmt(gstAmt);
   document.getElementById('discAmt').textContent    = `− ₹${disc.toFixed(2)}`;
   document.getElementById('grandTotal').textContent = fmt(total);
+
+  // CGST / SGST split rows (only present on billing page)
+  const splitRow = document.getElementById('gstSplitRow');
+  const sgstRow  = document.getElementById('sgstRow');
+  if (splitRow && sgstRow) {
+    if (gst > 0) {
+      splitRow.style.display = '';
+      sgstRow.style.display  = '';
+      document.getElementById('cgstLabel').textContent = `  ↳ CGST (${gst/2}%)`;
+      document.getElementById('cgstAmt').textContent   = fmt(cgst);
+      document.getElementById('sgstLabel').textContent = `  ↳ SGST (${gst/2}%)`;
+      document.getElementById('sgstAmt').textContent   = fmt(sgst);
+    } else {
+      splitRow.style.display = 'none';
+      sgstRow.style.display  = 'none';
+    }
+  }
 }
 
 function buildReceiptText() {
   const custName   = document.getElementById('custName').value || 'Walk-in Customer';
   const custMobile = document.getElementById('custMobile').value || '—';
-  const gst    = parseFloat(document.getElementById('gstRate').value);
+  const gst    = parseFloat(document.getElementById('gstRate').value) || 0;
   const disc   = parseFloat(document.getElementById('discount').value) || 0;
   const mode   = document.getElementById('payMode').value;
   const sub    = billItems.reduce((s, i) => s + i.price * i.qty, 0);
   const gstAmt = sub * gst / 100;
+  const cgst   = gstAmt / 2;
+  const sgst   = gstAmt / 2;
   const total  = Math.max(0, sub + gstAmt - disc);
   const now    = new Date();
+  const istOpts = { timeZone: 'Asia/Kolkata' };
+  const dateStr = now.toLocaleDateString('en-IN', { ...istOpts, day: 'numeric', month: 'long', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-IN', { ...istOpts, hour: '2-digit', minute: '2-digit' });
   const sep    = '─'.repeat(36);
   let lines = [
     '      AYINI HOME PRODUCTS',
@@ -168,8 +199,8 @@ function buildReceiptText() {
     '      +91 7397130039',
     sep,
     `Bill No  : #${String(currentBillNo).padStart(3,'0')}`,
-    `Date     : ${now.toLocaleDateString('en-IN')}`,
-    `Time     : ${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}`,
+    `Date     : ${dateStr}`,
+    `Time     : ${timeStr}`,
     `Customer : ${custName}`,
     `Mobile   : ${custMobile}`,
     `Payment  : ${mode}`,
@@ -184,7 +215,11 @@ function buildReceiptText() {
   });
   lines.push(sep);
   lines.push(`Subtotal          : ₹${sub.toFixed(2)}`);
-  if (gst > 0)  lines.push(`GST (${gst}%)          : ₹${gstAmt.toFixed(2)}`);
+  if (gst > 0) {
+    lines.push(`CGST (${gst/2}%)          : ₹${cgst.toFixed(2)}`);
+    lines.push(`SGST (${gst/2}%)          : ₹${sgst.toFixed(2)}`);
+    lines.push(`GST Total (${gst}%)    : ₹${gstAmt.toFixed(2)}`);
+  }
   if (disc > 0) lines.push(`Discount          : -₹${disc.toFixed(2)}`);
   lines.push(`TOTAL PAYABLE     : ₹${total.toFixed(2)}`);
   lines.push(sep);
@@ -230,6 +265,8 @@ async function confirmPayment() {
       gst_rate:     gst,
       subtotal:     sub,
       gst_amount:   gstAmt,
+      cgst_amount:  gstAmt / 2,
+      sgst_amount:  gstAmt / 2,
       discount:     disc,
       total:        total,
       items: billItems.map(i => ({ product_id: i.id, name: i.name, price: i.price, qty: i.qty, total: i.price * i.qty }))

@@ -128,7 +128,9 @@
         </div>
         <div class="totals-panel">
           <div class="total-row"><span>Subtotal</span><span id="subtotal">₹0.00</span></div>
-          <div class="total-row"><span id="gstLabel">GST (5%)</span><span id="gstAmt">₹0.00</span></div>
+          <div class="total-row"><span id="gstLabel">GST (0%)</span><span id="gstAmt">₹0.00</span></div>
+          <div class="total-row" id="gstSplitRow" style="display:none;opacity:0.7;font-size:12px"><span id="cgstLabel">  ↳ CGST (0%)</span><span id="cgstAmt">₹0.00</span></div>
+          <div class="total-row" id="sgstRow" style="display:none;opacity:0.7;font-size:12px"><span id="sgstLabel">  ↳ SGST (0%)</span><span id="sgstAmt">₹0.00</span></div>
           <div class="total-row discount-row"><span>Discount</span><span id="discAmt">– ₹0.00</span></div>
           <div class="total-row grand"><span>Total Payable</span><span id="grandTotal">₹0.00</span></div>
         </div>
@@ -193,41 +195,47 @@
 <script src="api.js"></script>
 <script src="billing.js"></script>
 <script>
+/* ── CUSTOM GST: show/hide input field ─────── */
 function handleGstChange() {
   const sel = document.getElementById('gstRate');
   const customInput = document.getElementById('customGst');
-  if (sel.value === 'custom') {
-    customInput.style.display = 'block';
-    customInput.focus();
-  } else {
-    customInput.style.display = 'none';
-  }
+  customInput.style.display = sel.value === 'custom' ? 'block' : 'none';
+  if (sel.value === 'custom') customInput.focus();
   recalc();
 }
 
-// Keep a reference to the original recalc from billing.js
+/* ── Override recalc to handle "custom" option ─
+   Temporarily sets a numeric value so billing.js
+   reads it correctly, then restores "custom"      */
 const _origRecalc = recalc;
-
-recalc = function() {
+recalc = function () {
   const sel = document.getElementById('gstRate');
   const customInput = document.getElementById('customGst');
-  const gstLabel = document.getElementById('gstLabel');
-
   if (sel.value === 'custom') {
     const rate = parseFloat(customInput.value) || 0;
-    // Temporarily set to numeric value so billing.js reads it correctly
     sel.value = rate;
     _origRecalc();
-    // Restore to "custom" so the dropdown stays on Custom %
     sel.value = 'custom';
-    // Update label manually
-    if (gstLabel) gstLabel.textContent = rate > 0 ? `GST (${rate}%)` : 'GST (0%)';
   } else {
-    const rate = parseFloat(sel.value) || 0;
     _origRecalc();
-    // Fix the static label bug for preset rates too
-    if (gstLabel) gstLabel.textContent = rate > 0 ? `GST (${rate}%)` : 'GST (0%)';
   }
+};
+
+/* ── Customer name default ──────────────────── */
+const _origProcessPayment = processPayment;
+processPayment = function () {
+  const n = document.getElementById('custName');
+  if (n && !n.value.trim()) n.value = 'Walk-in Customer';
+  _origProcessPayment();
+};
+
+/* ── WhatsApp: validate 10-digit mobile ─────── */
+const _origSendWhatsApp = sendWhatsApp;
+sendWhatsApp = function () {
+  const mobile = (document.getElementById('custMobile')?.value || '').replace(/\D/g, '');
+  const digits = mobile.startsWith('91') ? mobile.slice(2) : mobile;
+  if (digits.length !== 10) { showToast('⚠️ Enter a valid 10-digit mobile number for WhatsApp'); return; }
+  _origSendWhatsApp();
 };
 </script>
 </body>
