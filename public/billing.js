@@ -16,6 +16,7 @@ async function init() {
     currentBillNo = summary?.next_bill_no || 1;
     document.getElementById('billNo').textContent = `Bill #${String(currentBillNo).padStart(3,'0')}`;
     document.getElementById('billDt').textContent = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day:'numeric', month:'long', year:'numeric' });
+    document.getElementById('codeInput')?.focus();
   } catch(e) {
     showToast('Failed to load products');
   }
@@ -27,7 +28,7 @@ function populateQuickSelect() {
   allProducts.forEach(p => {
     const o = document.createElement('option');
     o.value = p.id;
-    o.textContent = `${p.name} — ₹${p.price}`;
+    o.textContent = `${p.code ? `[${p.code}] ` : ''}${p.name} — ₹${p.price}`;
     sel.appendChild(o);
   });
 }
@@ -55,7 +56,10 @@ function renderProducts(list) {
   g.innerHTML = list.map(p => `
     <div class="product-card" onclick="addToBill(${p.id})" title="Click to add to bill">
       <div class="pc-left">
-        <div class="pc-name">${p.name}</div>
+        <div class="pc-name">
+          ${p.code ? `<span style="display:inline-block;background:#e6f5ec;color:#1a5c35;font-size:10px;font-weight:800;padding:1px 6px;border-radius:4px;margin-right:5px;letter-spacing:0.5px">#${p.code}</span>` : ''}
+          ${p.name}
+        </div>
         <div class="pc-meta">
           <span>${p.category}</span>
           <span class="stock-badge ${stockClass(p.stock)}">${stockLabel(p.stock)}</span>
@@ -63,6 +67,33 @@ function renderProducts(list) {
       </div>
       <div class="pc-price">₹${p.price}</div>
     </div>`).join('');
+}
+
+/* ── FAST CODE ENTRY ─────────────────────────── */
+function previewCode() {
+  const code = parseInt(document.getElementById('codeInput').value);
+  const el   = document.getElementById('codePreview');
+  if (!el) return;
+  if (!code) { el.textContent = ''; return; }
+  const p = allProducts.find(x => x.code === code);
+  el.textContent = p ? `→ ${p.name} (₹${p.price})` : `Code ${code} not found`;
+  el.style.color = p ? '#2d7a4f' : '#c0392b';
+}
+
+function addToBillByCode() {
+  const codeEl = document.getElementById('codeInput');
+  const qtyEl  = document.getElementById('codeQty');
+  const code   = parseInt(codeEl.value);
+  const qty    = parseInt(qtyEl.value) || 1;
+  if (!code) { showToast('Enter a product code'); codeEl.focus(); return; }
+  const p = allProducts.find(x => x.code === code);
+  if (!p) { showToast(`⚠ No product with code ${code}`); codeEl.select(); return; }
+  addToBill(p.id, qty);
+  showToast(`✓ ${p.name} × ${qty} added`);
+  codeEl.value = '';
+  qtyEl.value  = 1;
+  document.getElementById('codePreview').textContent = '';
+  codeEl.focus();
 }
 
 function quickAdd() {

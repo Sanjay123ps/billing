@@ -44,11 +44,12 @@ function filterInv() {
 function renderInvTable(list) {
   const tbody = document.getElementById('invBody');
   if (!list || list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2.5rem;color:#8a8580;font-size:13px">No products found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2.5rem;color:#8a8580;font-size:13px">No products found</td></tr>`;
     return;
   }
   tbody.innerHTML = list.map(p => `
     <tr id="row-${p.id}">
+      <td style="font-weight:800;color:#1a5c35;font-size:13px;text-align:center">${p.code || '—'}</td>
       <td style="font-weight:500">${p.name}</td>
       <td><span style="font-size:12px;background:#f2fae6;color:#3B6D11;padding:3px 10px;border-radius:20px;border:1px solid #c0dd97">${p.category}</span></td>
       <td>₹${p.price}</td>
@@ -86,6 +87,7 @@ async function adjStock(id, delta) {
 function openAddProduct() {
   document.getElementById('prodModalTitle').textContent = 'Add New Product';
   document.getElementById('editId').value    = '';
+  document.getElementById('editCode').value  = '';
   document.getElementById('editName').value  = '';
   document.getElementById('editPrice').value = '';
   document.getElementById('editStock').value = '';
@@ -99,6 +101,7 @@ function openEditProduct(id) {
   if (!p) return;
   document.getElementById('prodModalTitle').textContent = 'Edit Product';
   document.getElementById('editId').value    = p.id;
+  document.getElementById('editCode').value  = p.code || '';
   document.getElementById('editName').value  = p.name;
   document.getElementById('editPrice').value = p.price;
   document.getElementById('editStock').value = p.stock;
@@ -113,16 +116,17 @@ async function saveProduct() {
   const stock = parseInt(document.getElementById('editStock').value);
   const cat   = document.getElementById('editCat').value;
   const unit  = document.getElementById('editUnit').value;
+  const code  = parseInt(document.getElementById('editCode').value) || null;
   const id    = parseInt(document.getElementById('editId').value);
   if (!name || isNaN(price) || isNaN(stock)) { showToast('Please fill all fields'); return; }
 
   try {
     if (id) {
-      const updated = await Products.update(id, { name, category: cat, price, stock, unit });
+      const updated = await Products.update(id, { code, name, category: cat, price, stock, unit });
       const idx = products.findIndex(x => x.id === id);
       if (idx !== -1) products[idx] = updated;
     } else {
-      const newProd = await Products.create({ name, category: cat, price, stock, unit });
+      const newProd = await Products.create({ code, name, category: cat, price, stock, unit });
       products.push(newProd);
       populateCatFilter();
     }

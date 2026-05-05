@@ -66,6 +66,23 @@
             <div class="bill-dt" id="billDt"></div>
           </div>
         </div>
+        <!-- ⚡ FAST CODE ENTRY BAR -->
+        <div style="background:linear-gradient(135deg,#f0faf4,#e6f5ec);border:1.5px solid #7dc99a;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:700;color:#1a5c35;white-space:nowrap">⚡ Code Entry</span>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:200px">
+            <input type="number" id="codeInput" class="text-input"
+              placeholder="Product code (1, 2, 3...)"
+              min="1" style="flex:1;height:36px;font-size:15px;font-weight:600;letter-spacing:1px"
+              oninput="previewCode()" onkeydown="if(event.key==='Enter'){document.getElementById('codeQty').select();}"/>
+            <span style="color:#7dc99a;font-weight:700">×</span>
+            <input type="number" id="codeQty" class="text-input"
+              value="1" min="1" style="width:64px;height:36px;text-align:center;font-size:15px;font-weight:600"
+              onkeydown="if(event.key==='Enter'){addToBillByCode();}"/>
+            <button onclick="addToBillByCode()" style="height:36px;padding:0 16px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Add →</button>
+          </div>
+          <span id="codePreview" style="font-size:12px;color:#2d7a4f;font-style:italic;min-width:120px"></span>
+        </div>
+
         <div class="customer-fields">
           <div class="field-group">
             <label class="field-label">Customer Name</label>

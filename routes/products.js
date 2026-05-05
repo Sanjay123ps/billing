@@ -28,11 +28,11 @@ router.get('/:id', authMiddleware, (req, res) => {
 
 // POST /api/products  — add product (admin only)
 router.post('/', authMiddleware, adminOnly, (req, res) => {
-  const { name, category, price, stock, unit } = req.body;
+  const { name, category, price, stock, unit, code } = req.body;
   if (!name || !category || price == null) return res.status(400).json({ error: 'name, category and price are required' });
   const result = run(
-    "INSERT INTO products (name, category, price, stock, unit) VALUES (?, ?, ?, ?, ?)",
-    [name, category, parseFloat(price), parseInt(stock)||0, unit||'pack']
+    "INSERT INTO products (code, name, category, price, stock, unit) VALUES (?, ?, ?, ?, ?, ?)",
+    [code ? parseInt(code) : null, name, category, parseFloat(price), parseInt(stock)||0, unit||'pack']
   );
   const newProd = get("SELECT * FROM products WHERE id = ?", [result.lastInsertRowid]);
   res.status(201).json(newProd);
@@ -40,12 +40,12 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
 
 // PUT /api/products/:id  — update product (admin only)
 router.put('/:id', authMiddleware, adminOnly, (req, res) => {
-  const { name, category, price, stock, unit } = req.body;
+  const { name, category, price, stock, unit, code } = req.body;
   const p = get("SELECT id FROM products WHERE id = ?", [req.params.id]);
   if (!p) return res.status(404).json({ error: 'Product not found' });
   run(
-    "UPDATE products SET name=?, category=?, price=?, stock=?, unit=?, updated_at=datetime('now') WHERE id=?",
-    [name, category, parseFloat(price), parseInt(stock), unit, req.params.id]
+    "UPDATE products SET code=?, name=?, category=?, price=?, stock=?, unit=?, updated_at=datetime('now') WHERE id=?",
+    [code ? parseInt(code) : null, name, category, parseFloat(price), parseInt(stock), unit, req.params.id]
   );
   res.json(get("SELECT * FROM products WHERE id = ?", [req.params.id]));
 });
