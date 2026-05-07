@@ -4,6 +4,10 @@ let billItems   = [];
 let activeCat   = '';
 let currentBillNo = 1;
 
+// ── UPI CONFIG — change to your actual UPI ID ──
+const UPI_ID   = '7397130039@upi';
+const UPI_NAME = 'Ayini Home Products';
+
 async function init() {
   requireAuth();
   try {
@@ -259,17 +263,147 @@ function buildReceiptText() {
   return lines.join('\n');
 }
 
+// ── HTML RECEIPT — bilingual (Tamil+English) + UPI QR code ──
+function buildReceiptHTML() {
+  const custName   = document.getElementById('custName').value || 'Walk-in Customer';
+  const custMobile = document.getElementById('custMobile').value || '—';
+  const gst    = parseFloat(document.getElementById('gstRate').value) || 0;
+  const disc   = parseFloat(document.getElementById('discount').value) || 0;
+  const mode   = document.getElementById('payMode').value;
+  const sub    = billItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const gstAmt = sub * gst / 100;
+  const cgst   = gstAmt / 2;
+  const sgst   = gstAmt / 2;
+  const total  = Math.max(0, sub + gstAmt - disc);
+  const now    = new Date();
+  const ist    = { timeZone: 'Asia/Kolkata' };
+  const dateStr = now.toLocaleDateString('en-IN', { ...ist, day:'numeric', month:'long', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-IN', { ...ist, hour:'2-digit', minute:'2-digit' });
+
+  // UPI QR — scan to pay exact bill amount
+  const upiStr = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total.toFixed(2)}&cu=INR`;
+  const qrURL  = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(upiStr)}`;
+
+  const itemRows = billItems.map(item => `
+    <tr>
+      <td style="padding:7px 4px;border-bottom:1px dashed #ddd;font-size:12px">${item.name}</td>
+      <td style="padding:7px 4px;border-bottom:1px dashed #ddd;text-align:center;font-size:12px">${item.qty}</td>
+      <td style="padding:7px 4px;border-bottom:1px dashed #ddd;text-align:right;font-size:12px">₹${item.price}</td>
+      <td style="padding:7px 4px;border-bottom:1px dashed #ddd;text-align:right;font-size:12px;font-weight:600">₹${(item.price*item.qty).toFixed(2)}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Bill — Ayini</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Courier New',monospace; font-size:13px; color:#1c1a16; background:#fff; max-width:320px; margin:0 auto; padding:16px; }
+  .center { text-align:center; }
+  .sep { border:none; border-top:1px dashed #999; margin:8px 0; }
+  .sep-solid { border:none; border-top:2px solid #1a5c35; margin:8px 0; }
+  .brand-en { font-size:17px; font-weight:700; color:#1a5c35; letter-spacing:1px; }
+  .brand-ta { font-size:13px; color:#2d7a4f; margin-top:2px; font-family:sans-serif; }
+  .addr { font-size:11px; color:#666; margin-top:4px; }
+  .meta-table { width:100%; margin:8px 0; }
+  .meta-table td { font-size:12px; padding:2px 0; vertical-align:top; }
+  .meta-table td:first-child { color:#555; width:110px; }
+  .meta-table td:last-child { font-weight:600; }
+  .items-table { width:100%; border-collapse:collapse; margin:8px 0; }
+  .items-table th { font-size:11px; text-transform:uppercase; border-bottom:2px solid #1a5c35; padding:5px 4px; text-align:left; color:#444; }
+  .items-table th:nth-child(2) { text-align:center; }
+  .items-table th:nth-child(3), .items-table th:nth-child(4) { text-align:right; }
+  .totals { margin-top:6px; }
+  .total-row { display:flex; justify-content:space-between; font-size:13px; padding:2px 0; }
+  .total-row.grand { font-size:15px; font-weight:700; color:#1a5c35; border-top:2px solid #1a5c35; margin-top:6px; padding-top:6px; }
+  .qr-section { text-align:center; margin:12px 0 6px; }
+  .footer-line { font-size:11px; color:#555; margin-top:3px; }
+  .footer-green { font-size:11px; color:#1a5c35; font-weight:600; margin-top:4px; }
+  @media print { body { padding:4px; } }
+</style>
+</head>
+<body>
+
+<div class="center">
+  <div class="brand-en">🌿 AYINI HOME PRODUCTS</div>
+  <div class="brand-ta">அயினி வீட்டு பொருட்கள்</div>
+  <div class="addr">Coimbatore, Tamil Nadu &nbsp;|&nbsp; +91 7397130039</div>
+</div>
+
+<hr class="sep-solid"/>
+
+<table class="meta-table">
+  <tr><td>Bill No / பில் எண்</td>  <td>#${String(currentBillNo).padStart(3,'0')}</td></tr>
+  <tr><td>Date / தேதி</td>          <td>${dateStr}</td></tr>
+  <tr><td>Time / நேரம்</td>          <td>${timeStr}</td></tr>
+  <tr><td>Customer / வாடிக்கையாளர்</td><td>${custName}</td></tr>
+  <tr><td>Mobile / தொலைபேசி</td>    <td>${custMobile}</td></tr>
+  <tr><td>Payment / கட்டணம்</td>    <td>${mode}</td></tr>
+</table>
+
+<hr class="sep"/>
+
+<table class="items-table">
+  <thead>
+    <tr>
+      <th>Item / பொருள்</th>
+      <th style="text-align:center">Qty</th>
+      <th style="text-align:right">Rate</th>
+      <th style="text-align:right">Total</th>
+    </tr>
+  </thead>
+  <tbody>${itemRows}</tbody>
+</table>
+
+<hr class="sep"/>
+
+<div class="totals">
+  <div class="total-row"><span>Subtotal / மொத்தம்</span><span>₹${sub.toFixed(2)}</span></div>
+  ${gst > 0 ? `
+  <div class="total-row" style="color:#555;font-size:12px"><span>&nbsp;↳ CGST (${gst/2}%)</span><span>₹${cgst.toFixed(2)}</span></div>
+  <div class="total-row" style="color:#555;font-size:12px"><span>&nbsp;↳ SGST (${gst/2}%)</span><span>₹${sgst.toFixed(2)}</span></div>
+  <div class="total-row"><span>GST Total (${gst}%)</span><span>₹${gstAmt.toFixed(2)}</span></div>` : ''}
+  ${disc > 0 ? `
+  <div class="total-row" style="color:#c0392b"><span>Discount / தள்ளுபடி</span><span>−₹${disc.toFixed(2)}</span></div>` : ''}
+  <div class="total-row grand">
+    <span>TOTAL / செலுத்த வேண்டியது</span>
+    <span>₹${total.toFixed(2)}</span>
+  </div>
+</div>
+
+${mode !== 'Credit' ? `
+<hr class="sep"/>
+<div class="qr-section">
+  <div class="footer-line" style="font-weight:600;margin-bottom:6px">📱 Scan to Pay / ஸ்கேன் செய்து பணம் செலுத்துங்கள்</div>
+  <img src="${qrURL}" width="120" height="120" alt="UPI QR" style="border:2px solid #1a5c35;border-radius:6px;padding:3px"/>
+  <div class="footer-line" style="margin-top:4px">UPI: ${UPI_ID}</div>
+</div>` : `
+<hr class="sep"/>
+<div style="text-align:center;background:#fff3e0;padding:8px;border-radius:4px;font-size:12px;color:#a04000;font-family:sans-serif">
+  ⏳ Credit Due / கடன் நிலுவை — ₹${total.toFixed(2)}
+</div>`}
+
+<hr class="sep-solid"/>
+<div class="center">
+  <div class="footer-line">Thank you for shopping with us!</div>
+  <div class="footer-line" style="font-family:sans-serif">எங்களிடம் வாங்கியதற்கு நன்றி!</div>
+  <div class="footer-green">Ayini — Pure. Natural. Homemade.</div>
+  <div class="footer-green" style="font-family:sans-serif">தூய்மையான · இயற்கையான · வீட்டில் தயாரிக்கப்பட்டது</div>
+</div>
+
+</body>
+</html>`;
+}
+
 function processPayment() {
   if (billItems.length === 0) { showToast('Add products to the bill first'); return; }
-  // Step 1: Print the bill first
-  const txt = buildReceiptText().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const w = window.open('', '_blank', 'width=420,height=640');
-  w.document.write(`<!DOCTYPE html><html><head><title>Bill - Ayini</title>
-  <style>body{font-family:'Courier New',monospace;font-size:13px;padding:24px;line-height:1.7;color:#1c1a16;background:#fff;white-space:pre}</style>
-  </head><body>${txt}</body></html>`);
+  // Print HTML receipt with QR + bilingual
+  const w = window.open('', '_blank', 'width=400,height=720');
+  w.document.write(buildReceiptHTML());
   w.document.close();
-  setTimeout(() => w.print(), 300);
-  // Step 2: Show confirm modal to save the bill
+  setTimeout(() => w.print(), 500);
+  // Show confirm modal to save
   document.getElementById('receiptPreview').textContent = buildReceiptText();
   document.getElementById('payModal').classList.add('open');
 }
@@ -318,12 +452,10 @@ async function confirmPayment() {
 
 function printBill() {
   if (billItems.length === 0) { showToast('Add products to the bill first'); return; }
-  const txt = buildReceiptText().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const w = window.open('', '_blank', 'width=420,height=640');
-  w.document.write(`<!DOCTYPE html><html><head><title>Bill - Ayini</title>
-  <style>body{font-family:'Courier New',monospace;font-size:13px;padding:24px;line-height:1.7;color:#1c1a16;background:#fff;white-space:pre}</style>
-  </head><body>${txt}</body></html>`);
-  w.document.close(); setTimeout(() => w.print(), 300);
+  const w = window.open('', '_blank', 'width=400,height=720');
+  w.document.write(buildReceiptHTML());
+  w.document.close();
+  setTimeout(() => w.print(), 500);
 }
 
 function sendWhatsApp() {

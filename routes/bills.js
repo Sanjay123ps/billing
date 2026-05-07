@@ -73,4 +73,12 @@ router.delete('/:id', authMiddleware, (req, res) => {
   res.json({ message: 'Bill deleted' });
 });
 
+// PATCH /api/bills/:id/pay — mark credit bill as paid
+router.patch('/:id/pay', authMiddleware, (req, res) => {
+  const b = get("SELECT id FROM bills WHERE id = ?", [req.params.id]);
+  if (!b) return res.status(404).json({ error: 'Bill not found' });
+  run("UPDATE bills SET payment_mode = ? WHERE id = ?", [req.body.payment_mode || 'Cash', req.params.id]);
+  res.json(get("SELECT * FROM bills WHERE id = ?", [req.params.id]));
+});
+
 module.exports = router;

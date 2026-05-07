@@ -152,4 +152,30 @@ function closeProdModal() {
   document.getElementById('productModal').classList.remove('open');
 }
 
+/* ── EDIT BY CODE ──────────────────────────── */
+function openEditByCode() {
+  document.getElementById('searchCode').value = '';
+  document.getElementById('codeSearchMsg').textContent = '';
+  document.getElementById('editByCodeModal').classList.add('open');
+  setTimeout(() => document.getElementById('searchCode').focus(), 100);
+}
+
+function closeEditByCode() {
+  document.getElementById('editByCodeModal').classList.remove('open');
+}
+
+function findAndEdit() {
+  const code = parseInt(document.getElementById('searchCode').value);
+  const msg  = document.getElementById('codeSearchMsg');
+  if (!code) { msg.innerHTML = '<span style="color:#c0392b">Please enter a code number</span>'; return; }
+  const p = products.find(x => x.code === code);
+  if (!p) {
+    msg.innerHTML = `<span style="color:#c0392b">❌ No product found with code <strong>${code}</strong></span>`;
+    return;
+  }
+  // Found — close this modal and open edit modal with product pre-filled
+  closeEditByCode();
+  openEditProduct(p.id);
+}
+
 document.addEventListener('DOMContentLoaded', init);

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Closing Summary — Ayini</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  .summary-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; margin-bottom:2rem; }
+  .pay-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem; box-shadow:var(--shadow-sm); }
+  .pay-card-label { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+  .pay-card-amount { font-size:28px; font-weight:700; margin:8px 0 4px; font-family:'Playfair Display',serif; }
+  .pay-card-count { font-size:12px; color:var(--text-muted); }
+  .pay-cash   { border-top:4px solid #27ae60; } .pay-cash .pay-card-amount   { color:#27ae60; }
+  .pay-upi    { border-top:4px solid #2980b9; } .pay-upi .pay-card-amount    { color:#2980b9; }
+  .pay-card-c { border-top:4px solid #8e44ad; } .pay-card-c .pay-card-amount { color:#8e44ad; }
+  .pay-credit { border-top:4px solid #e67e22; } .pay-credit .pay-card-amount { color:#e67e22; }
+  .pay-total  { border-top:4px solid #1a5c35; } .pay-total .pay-card-amount  { color:#1a5c35; }
+  .gst-table  { width:100%; border-collapse:collapse; background:#fff; border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-sm); }
+  .gst-table th { background:var(--green-800); color:#fff; padding:12px 16px; font-size:12px; text-align:left; }
+  .gst-table td { padding:11px 16px; border-bottom:1px solid var(--border-light); font-size:13px; }
+  .gst-table tr:last-child td { border-bottom:none; font-weight:700; background:var(--cream); }
+  .section-title { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:var(--green-800); margin:2rem 0 1rem; }
+  .date-bar { display:flex; gap:10px; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; }
+  @media print {
+    .navbar,.mobile-bottom-nav,.date-bar,.no-print { display:none!important; }
+    body { background:#fff; }
+    .page-container { padding:0; }
+  }
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="index.html"><span class="brand-leaf">🌿</span><span class="brand-text">Ayini <span>Home Products</span></span></a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Billing</a>
+      <a href="saved-bills.html" class="nav-link">Saved Bills</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="reports.html" class="nav-link">Reports</a>
+      <a href="closing-summary.html" class="nav-link active">Closing</a>
+      <a href="credit-bills.html" class="nav-link">Credits</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <span class="nav-date" id="navDate"></span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.6)" id="navUser"></span>
+      <button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Daily Closing Summary</h1>
+      <p class="page-sub">End of day report — cash, UPI, card and credit totals</p>
+    </div>
+    <button class="btn-primary no-print" onclick="window.print()">🖨️ Print Report</button>
+  </div>
+
+  <div class="date-bar no-print">
+    <label class="field-label" style="margin:0">Select Date:</label>
+    <input type="date" id="summaryDate" class="select-sm" style="color:#1c1a16"/>
+    <button class="btn-primary" onclick="loadSummary()" style="height:36px;padding:0 16px">Load</button>
+  </div>
+
+  <div id="reportDateLabel" style="font-size:13px;color:var(--text-muted);margin-bottom:1rem"></div>
+
+  <!-- Payment breakdown cards -->
+  <div class="summary-grid" id="summaryCards">
+    <div style="grid-column:1/-1;text-align:center;padding:3rem;color:var(--text-muted)">Loading...</div>
+  </div>
+
+  <!-- GST Summary -->
+  <div class="section-title">GST Collected Today</div>
+  <div id="gstSummaryToday" style="margin-bottom:2rem"></div>
+
+  <!-- Monthly GST Table -->
+  <div class="section-title">Monthly GST Report</div>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">CGST + SGST totals grouped by month — ready for filing</p>
+  <div id="monthlyGstTable"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="api.js"></script>
+<script>
+requireAuth();
+
+// Set today's date as default
+const todayIST = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+document.getElementById('summaryDate').value = todayIST;
+
+async function loadSummary() {
+  const date = document.getElementById('summaryDate').value;
+  if (!date) return;
+
+  document.getElementById('reportDateLabel').textContent =
+    `Showing data for: ${new Date(date).toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' })}`;
+  document.getElementById('summaryCards').innerHTML =
+    '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted)">Loading...</div>';
+
+  try {
+    const allBills = await Bills.getAll();
+
+    // Filter bills for selected date (IST)
+    const dayBills = allBills.filter(b => {
+      if (!b.created_at) return false;
+      const billDate = new Date(b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      return billDate === date;
+    });
+
+    // Group by payment mode
+    const modes = ['Cash', 'UPI', 'Card', 'Credit'];
+    const groups = {};
+    modes.forEach(m => groups[m] = { total: 0, count: 0 });
+    dayBills.forEach(b => {
+      const m = b.payment_mode || 'Cash';
+      if (groups[m]) { groups[m].total += parseFloat(b.total || 0); groups[m].count++; }
+    });
+    const grandTotal = dayBills.reduce((s, b) => s + parseFloat(b.total || 0), 0);
+    const totalGST   = dayBills.reduce((s, b) => s + parseFloat(b.gst_amount || 0), 0);
+    const totalCGST  = totalGST / 2;
+    const totalSGST  = totalGST / 2;
+
+    // Render payment cards
+    const styleMap = { Cash:'pay-cash', UPI:'pay-upi', Card:'pay-card-c', Credit:'pay-credit' };
+    document.getElementById('summaryCards').innerHTML =
+      modes.map(m => `
+        <div class="pay-card ${styleMap[m]}">
+          <div class="pay-card-label">${m === 'Credit' ? '💳 Credit (Due)' : m === 'Cash' ? '💵 Cash' : m === 'UPI' ? '📱 UPI' : '🏦 Card'}</div>
+          <div class="pay-card-amount">₹${groups[m].total.toFixed(2)}</div>
+          <div class="pay-card-count">${groups[m].count} bill${groups[m].count !== 1 ? 's' : ''}</div>
+        </div>`).join('') +
+      `<div class="pay-card pay-total">
+        <div class="pay-card-label">🧾 Total Revenue</div>
+        <div class="pay-card-amount">₹${grandTotal.toFixed(2)}</div>
+        <div class="pay-card-count">${dayBills.length} bills total</div>
+      </div>`;
+
+    // GST today
+    document.getElementById('gstSummaryToday').innerHTML = totalGST > 0 ? `
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div class="pay-card" style="border-top:4px solid #16a085;min-width:160px">
+          <div class="pay-card-label">CGST Collected</div>
+          <div class="pay-card-amount" style="color:#16a085;font-size:22px">₹${totalCGST.toFixed(2)}</div>
+        </div>
+        <div class="pay-card" style="border-top:4px solid #16a085;min-width:160px">
+          <div class="pay-card-label">SGST Collected</div>
+          <div class="pay-card-amount" style="color:#16a085;font-size:22px">₹${totalSGST.toFixed(2)}</div>
+        </div>
+        <div class="pay-card" style="border-top:4px solid #1a5c35;min-width:160px">
+          <div class="pay-card-label">Total GST</div>
+          <div class="pay-card-amount" style="color:#1a5c35;font-size:22px">₹${totalGST.toFixed(2)}</div>
+        </div>
+      </div>` :
+      '<p style="color:var(--text-muted);font-size:13px">No GST collected on this date.</p>';
+
+    // Monthly GST table — all bills
+    const monthly = {};
+    allBills.forEach(b => {
+      const d = new Date(b.created_at);
+      const key = d.toLocaleDateString('en-IN', { timeZone:'Asia/Kolkata', month:'long', year:'numeric' });
+      if (!monthly[key]) monthly[key] = { bills:0, subtotal:0, gst:0, cgst:0, sgst:0, total:0 };
+      monthly[key].bills++;
+      monthly[key].subtotal += parseFloat(b.subtotal || 0);
+      monthly[key].gst      += parseFloat(b.gst_amount || 0);
+      monthly[key].cgst     += parseFloat(b.cgst_amount || b.gst_amount / 2 || 0);
+      monthly[key].sgst     += parseFloat(b.sgst_amount || b.gst_amount / 2 || 0);
+      monthly[key].total    += parseFloat(b.total || 0);
+    });
+
+    const keys = Object.keys(monthly);
+    if (keys.length === 0) {
+      document.getElementById('monthlyGstTable').innerHTML =
+        '<p style="color:var(--text-muted);font-size:13px">No bills found.</p>';
+      return;
+    }
+
+    const totRow = { bills:0, subtotal:0, gst:0, cgst:0, sgst:0, total:0 };
+    keys.forEach(k => { Object.keys(totRow).forEach(f => totRow[f] += monthly[k][f]); });
+
+    document.getElementById('monthlyGstTable').innerHTML = `
+      <table class="gst-table">
+        <thead><tr>
+          <th>Month</th><th>Bills</th><th>Subtotal (₹)</th>
+          <th>CGST (₹)</th><th>SGST (₹)</th><th>Total GST (₹)</th><th>Revenue (₹)</th>
+        </tr></thead>
+        <tbody>
+          ${keys.map(k => `<tr>
+            <td>${k}</td>
+            <td>${monthly[k].bills}</td>
+            <td>${monthly[k].subtotal.toFixed(2)}</td>
+            <td>${monthly[k].cgst.toFixed(2)}</td>
+            <td>${monthly[k].sgst.toFixed(2)}</td>
+            <td>${monthly[k].gst.toFixed(2)}</td>
+            <td><strong>${monthly[k].total.toFixed(2)}</strong></td>
+          </tr>`).join('')}
+          <tr>
+            <td>TOTAL</td>
+            <td>${totRow.bills}</td>
+            <td>${totRow.subtotal.toFixed(2)}</td>
+            <td>${totRow.cgst.toFixed(2)}</td>
+            <td>${totRow.sgst.toFixed(2)}</td>
+            <td>${totRow.gst.toFixed(2)}</td>
+            <td>${totRow.total.toFixed(2)}</td>
+          </tr>
+        </tbody>
+      </table>`;
+
+  } catch(e) {
+    document.getElementById('summaryCards').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--red-600)">Failed to load data</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadSummary);
+</script>
+</body>
+</html>
