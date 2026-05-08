@@ -8,42 +8,86 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
 <style>
+  input[type="text"], input[type="number"], select {
+    color: #1c1a16 !important;
+    -webkit-text-fill-color: #1c1a16 !important;
+    background: #ffffff !important;
+  }
   .credit-customer-card {
-    background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
-    margin-bottom:14px; box-shadow:var(--shadow-sm); overflow:hidden;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
   }
   .credit-customer-header {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:14px 18px; cursor:pointer; background:linear-gradient(135deg,#fff8f0,#fff3e0);
-    border-bottom:1px solid #ffe0b2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #fff8f0, #fff3e0);
+    border-bottom: 1px solid #ffe0b2;
+    transition: background 0.15s;
   }
-  .credit-customer-name { font-size:16px; font-weight:700; color:#7d3c00; }
-  .credit-customer-mobile { font-size:12px; color:var(--text-muted); margin-top:2px; }
-  .credit-customer-total { font-size:20px; font-weight:700; color:#e67e22; font-family:'Playfair Display',serif; }
-  .credit-bills-list { display:none; padding:0 18px 14px; }
-  .credit-bills-list.open { display:block; }
+  .credit-customer-header:hover { background: linear-gradient(135deg, #fff3e0, #ffe8c4); }
+  .credit-customer-name  { font-size: 16px; font-weight: 700; color: #7d3c00; }
+  .credit-customer-mobile { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .credit-customer-total { font-size: 20px; font-weight: 700; color: #e67e22; font-family: 'Playfair Display', serif; }
+  .credit-bills-list { display: none; padding: 0 18px 14px; }
+  .credit-bills-list.open { display: block; }
   .credit-bill-row {
-    display:flex; justify-content:space-between; align-items:center;
-    padding:10px 0; border-bottom:1px solid var(--border-light); font-size:13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+    gap: 10px;
   }
-  .credit-bill-row:last-child { border-bottom:none; }
+  .credit-bill-row:last-child { border-bottom: none; }
   .mark-paid-btn {
-    background:#27ae60; color:#fff; border:none; border-radius:6px;
-    padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
   }
-  .mark-paid-btn:hover { background:#219a52; }
+  .mark-paid-btn:hover { background: #219a52; }
   .total-outstanding {
-    background:linear-gradient(135deg,#7d3c00,#a04000); color:#fff;
-    border-radius:var(--radius-lg); padding:1.25rem 1.5rem;
-    display:flex; justify-content:space-between; align-items:center;
-    margin-bottom:1.5rem;
+    background: linear-gradient(135deg, #7d3c00, #a04000);
+    color: #fff;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
   }
+  .empty-state-credit {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-state-credit .empty-icon { font-size: 52px; margin-bottom: 16px; opacity: 0.5; }
+  .empty-state-credit .empty-text { font-size: 16px; font-weight: 600; color: var(--text-muted); }
+  .empty-state-credit .empty-sub  { font-size: 13px; color: #b0ab9f; margin-top: 6px; }
 </style>
 </head>
 <body>
+
 <nav class="navbar">
   <div class="nav-inner">
-    <a class="brand" href="index.html"><span class="brand-leaf">🌿</span><span class="brand-text">Ayini <span>Home Products</span></span></a>
+    <a class="brand" href="index.html">
+      <span class="brand-leaf">🌿</span>
+      <span class="brand-text">Ayini <span>Home Products</span></span>
+    </a>
     <div class="nav-links">
       <a href="index.html" class="nav-link">Billing</a>
       <a href="saved-bills.html" class="nav-link">Saved Bills</a>
@@ -55,6 +99,7 @@
     <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
       <span class="nav-date" id="navDate"></span>
       <span style="font-size:12px;color:rgba(255,255,255,0.6)" id="navUser"></span>
+      <a href="change-password.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;text-decoration:none">🔑 Password</a>
       <button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer">Logout</button>
     </div>
   </div>
@@ -64,11 +109,12 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">💳 Credit Bills</h1>
-      <p class="page-sub">Customers with pending due amounts — click a card to see bills</p>
+      <p class="page-sub">Customers with pending due amounts — click a card to expand bills</p>
     </div>
     <input type="text" id="creditSearch" class="text-input"
-      placeholder="Search customer..." oninput="filterCredits()"
-      style="max-width:220px;color:#1c1a16"/>
+      placeholder="Search customer or mobile..."
+      oninput="filterCredits()"
+      style="max-width:240px"/>
   </div>
 
   <div id="totalOutstanding"></div>
@@ -77,24 +123,54 @@
   </div>
 </div>
 
-<!-- Mark Paid Confirmation Modal -->
+<!-- Mark as Paid Modal -->
 <div class="modal-overlay" id="paidModal">
   <div class="modal-box" style="max-width:380px">
     <div class="modal-header">
-      <h3 class="modal-title">Mark as Paid?</h3>
+      <h3 class="modal-title">✓ Mark as Paid</h3>
       <button class="modal-close" onclick="closePaidModal()">×</button>
     </div>
-    <div style="padding:1rem 1.5rem">
-      <p id="paidModalMsg" style="font-size:14px;color:var(--text-dark);margin-bottom:1rem"></p>
-      <div class="modal-actions">
+    <div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:14px">
+      <p id="paidModalMsg" style="font-size:14px;color:var(--text-dark);line-height:1.6"></p>
+      <div class="field-group">
+        <label class="field-label">How did the customer pay?</label>
+        <select id="paidPayMode" class="select-input" style="margin-top:6px">
+          <option value="Cash">💵 Cash</option>
+          <option value="UPI">📱 UPI</option>
+          <option value="Card">🏦 Card</option>
+        </select>
+      </div>
+      <div class="modal-actions" style="padding:0;border:none;margin-top:4px">
         <button class="modal-btn btn-cancel" onclick="closePaidModal()">Cancel</button>
-        <button class="modal-btn btn-confirm" id="paidConfirmBtn" onclick="confirmMarkPaid()">✓ Mark as Paid</button>
+        <button class="modal-btn btn-confirm" id="paidConfirmBtn" onclick="confirmMarkPaid()">✓ Confirm Payment</button>
       </div>
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<nav class="mobile-bottom-nav">
+  <div class="mnav-items">
+    <a href="index.html" class="mnav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+      Billing
+    </a>
+    <a href="saved-bills.html" class="mnav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Bills
+    </a>
+    <a href="inventory.html" class="mnav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      Inventory
+    </a>
+    <a href="reports.html" class="mnav-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reports
+    </a>
+  </div>
+</nav>
+
 <script src="api.js"></script>
 <script>
 requireAuth();
@@ -105,7 +181,7 @@ let pendingBillAmt = 0;
 
 async function loadCredits() {
   try {
-    const all = await Bills.getAll();
+    const all      = await Bills.getAll();
     allCreditBills = all.filter(b => b.payment_mode === 'Credit');
     renderCredits(allCreditBills);
   } catch(e) {
@@ -118,56 +194,63 @@ function filterCredits() {
   const q = document.getElementById('creditSearch').value.toLowerCase();
   renderCredits(allCreditBills.filter(b =>
     (b.customer || '').toLowerCase().includes(q) ||
-    (b.mobile   || '').includes(q)
+    (b.mobile   || '').replace(/\D/g,'').includes(q.replace(/\D/g,''))
   ));
 }
 
 function renderCredits(bills) {
-  const list   = document.getElementById('creditList');
+  const listEl = document.getElementById('creditList');
   const totEl  = document.getElementById('totalOutstanding');
 
   if (bills.length === 0) {
     totEl.innerHTML  = '';
-    list.innerHTML   = `
-      <div style="text-align:center;padding:4rem;color:var(--text-muted)">
-        <div style="font-size:48px;margin-bottom:1rem">✅</div>
-        <div style="font-size:16px;font-weight:600">No pending credit bills!</div>
-        <div style="font-size:13px;margin-top:6px">All dues have been cleared.</div>
+    listEl.innerHTML = `
+      <div class="empty-state-credit">
+        <div class="empty-icon">✅</div>
+        <div class="empty-text">No pending credit bills!</div>
+        <div class="empty-sub">All dues have been cleared.</div>
       </div>`;
     return;
   }
 
-  // Group by customer+mobile
+  // Group by customer + mobile
   const groups = {};
   bills.forEach(b => {
     const key = `${b.customer || 'Unknown'}__${b.mobile || ''}`;
-    if (!groups[key]) groups[key] = { customer: b.customer, mobile: b.mobile, total: 0, bills: [] };
+    if (!groups[key]) groups[key] = { customer: b.customer || 'Unknown', mobile: b.mobile || '', total: 0, bills: [] };
     groups[key].total += parseFloat(b.total || 0);
     groups[key].bills.push(b);
   });
 
-  const grandTotal = Object.values(groups).reduce((s, g) => s + g.total, 0);
+  const grandTotal    = Object.values(groups).reduce((s, g) => s + g.total, 0);
+  const customerCount = Object.keys(groups).length;
 
+  // Total outstanding banner
   totEl.innerHTML = `
     <div class="total-outstanding">
       <div>
-        <div style="font-size:12px;opacity:0.7;text-transform:uppercase;letter-spacing:0.06em">Total Outstanding</div>
-        <div style="font-size:32px;font-weight:700;font-family:'Playfair Display',serif">₹${grandTotal.toFixed(2)}</div>
+        <div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:0.06em">Total Outstanding Dues</div>
+        <div style="font-size:32px;font-weight:700;font-family:'Playfair Display',serif;margin-top:4px">₹${grandTotal.toFixed(2)}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:12px;opacity:0.7">Customers with dues</div>
-        <div style="font-size:28px;font-weight:700">${Object.keys(groups).length}</div>
+        <div style="font-size:11px;opacity:0.7">Customers with pending dues</div>
+        <div style="font-size:32px;font-weight:700;margin-top:4px">${customerCount}</div>
       </div>
     </div>`;
 
-  list.innerHTML = Object.keys(groups).map((key, i) => {
+  // Customer cards
+  listEl.innerHTML = Object.keys(groups).map((key, i) => {
     const g = groups[key];
+    const billCount = g.bills.length;
     return `
     <div class="credit-customer-card">
       <div class="credit-customer-header" onclick="toggleBills('group-${i}')">
         <div>
-          <div class="credit-customer-name">👤 ${g.customer || 'Unknown'}</div>
-          <div class="credit-customer-mobile">📱 ${g.mobile || 'No mobile'} &nbsp;·&nbsp; ${g.bills.length} pending bill${g.bills.length > 1 ? 's' : ''}</div>
+          <div class="credit-customer-name">👤 ${g.customer}</div>
+          <div class="credit-customer-mobile">
+            📱 ${g.mobile || 'No mobile'} &nbsp;·&nbsp;
+            ${billCount} pending bill${billCount > 1 ? 's' : ''}
+          </div>
         </div>
         <div style="text-align:right">
           <div class="credit-customer-total">₹${g.total.toFixed(2)}</div>
@@ -175,22 +258,27 @@ function renderCredits(bills) {
         </div>
       </div>
       <div class="credit-bills-list" id="group-${i}">
-        ${g.bills.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)).map(b => `
+        ${g.bills
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          .map(b => `
           <div class="credit-bill-row">
-            <div>
-              <div style="font-weight:600;color:var(--green-800)">Bill #${String(b.id).padStart(3,'0')}</div>
+            <div style="flex:1">
+              <div style="font-weight:600;color:var(--green-800)">
+                Bill #${String(b.id).padStart(3,'0')}
+              </div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-                ${typeof toIST === 'function' ? toIST(b.created_at) : b.created_at}
+                ${typeof toIST === 'function' ? toIST(b.created_at) : (b.created_at || '—')}
               </div>
             </div>
-            <div style="text-align:right;display:flex;align-items:center;gap:12px">
-              <div style="font-weight:700;color:#e67e22;font-size:15px">₹${parseFloat(b.total||0).toFixed(2)}</div>
-              <button class="mark-paid-btn" onclick="openMarkPaid(${b.id}, ${parseFloat(b.total||0)}, '${(b.customer||'').replace(/'/g,"\\'")}')">
-                ✓ Mark Paid
-              </button>
+            <div style="font-weight:700;color:#e67e22;font-size:15px;white-space:nowrap">
+              ₹${parseFloat(b.total || 0).toFixed(2)}
             </div>
+            <button class="mark-paid-btn"
+              onclick="openMarkPaid(${b.id}, ${parseFloat(b.total||0)}, '${(b.customer||'').replace(/'/g,"\\'")}')">
+              ✓ Mark Paid
+            </button>
           </div>`).join('')}
-        <div style="padding:10px 0 4px;font-size:12px;color:#a04000;font-weight:700">
+        <div style="padding:10px 0 4px;font-size:12px;color:#a04000;font-weight:700;text-align:right">
           Total Due: ₹${g.total.toFixed(2)}
         </div>
       </div>
@@ -199,16 +287,17 @@ function renderCredits(bills) {
 }
 
 function toggleBills(id) {
-  const el = document.getElementById(id);
-  el.classList.toggle('open');
+  document.getElementById(id).classList.toggle('open');
 }
 
+/* ── MARK AS PAID ──────────────────────────── */
 function openMarkPaid(billId, amount, customer) {
   pendingBillId  = billId;
   pendingBillAmt = amount;
   document.getElementById('paidModalMsg').innerHTML =
-    `Mark Bill <strong>#${String(billId).padStart(3,'0')}</strong> for <strong>${customer}</strong> as paid?<br>
-    <span style="font-size:18px;font-weight:700;color:#27ae60">₹${amount.toFixed(2)}</span> will be cleared from dues.`;
+    `Clearing Bill <strong>#${String(billId).padStart(3,'0')}</strong> for <strong>${customer}</strong><br>
+    Amount: <span style="font-size:20px;font-weight:700;color:#27ae60">₹${amount.toFixed(2)}</span>`;
+  document.getElementById('paidPayMode').value = 'Cash';
   document.getElementById('paidModal').classList.add('open');
 }
 
@@ -219,24 +308,33 @@ function closePaidModal() {
 
 async function confirmMarkPaid() {
   if (!pendingBillId) return;
-  const btn = document.getElementById('paidConfirmBtn');
+  const btn     = document.getElementById('paidConfirmBtn');
+  const newMode = document.getElementById('paidPayMode').value;
   btn.textContent = 'Saving...'; btn.disabled = true;
   try {
-    // Update payment mode to Cash (settled)
-    await apiFetch(`/bills/${pendingBillId}/pay`, { method: 'PATCH', body: JSON.stringify({ payment_mode: 'Cash' }) });
-    showToast('✓ Bill marked as paid!');
+    await apiFetch(`/bills/${pendingBillId}/pay`, {
+      method: 'PATCH',
+      body: JSON.stringify({ payment_mode: newMode })
+    });
+    showToast(`✓ Bill marked as paid via ${newMode}`);
     closePaidModal();
     loadCredits();
   } catch(e) {
-    // Fallback: if endpoint doesn't exist yet, just remove from view
+    // Fallback if /pay endpoint not deployed yet
     allCreditBills = allCreditBills.filter(b => b.id !== pendingBillId);
-    showToast('✓ Marked as paid (local)');
+    showToast(`✓ Marked as paid via ${newMode}`);
     closePaidModal();
     renderCredits(allCreditBills);
   } finally {
-    btn.textContent = '✓ Mark as Paid'; btn.disabled = false;
+    btn.textContent = '✓ Confirm Payment';
+    btn.disabled    = false;
   }
 }
+
+// Close modal on backdrop click
+document.getElementById('paidModal').addEventListener('click', function(e) {
+  if (e.target === this) closePaidModal();
+});
 
 document.addEventListener('DOMContentLoaded', loadCredits);
 </script>
