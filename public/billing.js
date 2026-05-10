@@ -1,12 +1,18 @@
 // ===== BILLING PAGE JS — API VERSION =====
-let allProducts = [];
-let billItems   = [];
-let activeCat   = '';
+let allProducts   = [];
+let billItems     = [];
+let activeCat     = '';
 let currentBillNo = 1;
+let whatsappSent  = false; // WhatsApp must be sent before Process Payment / Print
 
-// ── UPI CONFIG — change to your actual UPI ID ──
-const UPI_ID   = '7397130039@upi';
-const UPI_NAME = 'Ayini Home Products';
+// ── Business details ──────────────────────────────────────────────────────────
+const SHOP_NAME    = 'AYINI HOME PRODUCTS';
+const SHOP_ADDR1   = '13/236, Ranganathapuram';
+const SHOP_ADDR2   = 'Periyanaicken Palayam, Coimbatore - 641020';
+const SHOP_PHONE   = '+91 7397130039';
+const SHOP_CATALOG = 'https://wa.me/c/917397130039';
+const UPI_ID       = '7397130039@upi';
+const UPI_NAME     = 'Ayini Home Products';
 
 async function init() {
   requireAuth();
@@ -21,6 +27,7 @@ async function init() {
     document.getElementById('billNo').textContent = `Bill #${String(currentBillNo).padStart(3,'0')}`;
     document.getElementById('billDt').textContent = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day:'numeric', month:'long', year:'numeric' });
     document.getElementById('codeInput')?.focus();
+    setActionLock(true); // lock Process Payment & Print until WhatsApp sent
   } catch(e) {
     showToast('Failed to load products');
   }
@@ -174,27 +181,28 @@ function renderBill() {
 }
 
 function recalc() {
-  const sub    = billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const gst    = parseFloat(document.getElementById('gstRate').value) || 0;
-  const discEl = document.getElementById('discount');
-  let disc     = parseFloat(discEl?.value) || 0;
+  const sub      = billItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const gst      = parseFloat(document.getElementById('gstRate').value) || 0;
+  const discEl   = document.getElementById('discount');
+  let discPct    = parseFloat(discEl?.value) || 0;
 
-  // Cap discount — can't exceed subtotal
-  if (disc > sub) { disc = sub; if (discEl) discEl.value = sub.toFixed(2); }
-  if (disc < 0)   { disc = 0;   if (discEl) discEl.value = 0; }
+  // Cap discount % between 0 and 100
+  if (discPct > 100) { discPct = 100; if (discEl) discEl.value = 100; }
+  if (discPct < 0)   { discPct = 0;   if (discEl) discEl.value = 0; }
 
-  const gstAmt = sub * gst / 100;
-  const cgst   = gstAmt / 2;
-  const sgst   = gstAmt / 2;
-  const total  = Math.max(0, sub + gstAmt - disc);
+  const discAmt = sub * discPct / 100;
+  const gstAmt  = sub * gst / 100;
+  const cgst    = gstAmt / 2;
+  const sgst    = gstAmt / 2;
+  const total   = Math.max(0, sub + gstAmt - discAmt);
 
   document.getElementById('subtotal').textContent   = fmt(sub);
   document.getElementById('gstLabel').textContent   = gst > 0 ? `GST (${gst}%)` : 'GST (0%)';
   document.getElementById('gstAmt').textContent     = fmt(gstAmt);
-  document.getElementById('discAmt').textContent    = `− ₹${disc.toFixed(2)}`;
+  document.getElementById('discAmt').textContent    = discPct > 0 ? `− ₹${discAmt.toFixed(2)} (${discPct}%)` : '− ₹0.00';
   document.getElementById('grandTotal').textContent = fmt(total);
 
-  // CGST / SGST split rows (only present on billing page)
+  // CGST / SGST split rows
   const splitRow = document.getElementById('gstSplitRow');
   const sgstRow  = document.getElementById('sgstRow');
   if (splitRow && sgstRow) {
@@ -215,23 +223,25 @@ function recalc() {
 function buildReceiptText() {
   const custName   = document.getElementById('custName').value || 'Walk-in Customer';
   const custMobile = document.getElementById('custMobile').value || '—';
-  const gst    = parseFloat(document.getElementById('gstRate').value) || 0;
-  const disc   = parseFloat(document.getElementById('discount').value) || 0;
-  const mode   = document.getElementById('payMode').value;
-  const sub    = billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const gstAmt = sub * gst / 100;
-  const cgst   = gstAmt / 2;
-  const sgst   = gstAmt / 2;
-  const total  = Math.max(0, sub + gstAmt - disc);
-  const now    = new Date();
+  const gst     = parseFloat(document.getElementById('gstRate').value) || 0;
+  const discPct = parseFloat(document.getElementById('discount').value) || 0;
+  const mode    = document.getElementById('payMode').value;
+  const sub     = billItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const gstAmt  = sub * gst / 100;
+  const cgst    = gstAmt / 2;
+  const sgst    = gstAmt / 2;
+  const discAmt = sub * discPct / 100;
+  const total   = Math.max(0, sub + gstAmt - discAmt);
+  const now     = new Date();
   const istOpts = { timeZone: 'Asia/Kolkata' };
-  const dateStr = now.toLocaleDateString('en-IN', { ...istOpts, day: 'numeric', month: 'long', year: 'numeric' });
-  const timeStr = now.toLocaleTimeString('en-IN', { ...istOpts, hour: '2-digit', minute: '2-digit' });
-  const sep    = '─'.repeat(36);
+  const dateStr = now.toLocaleDateString('en-IN',  { ...istOpts, day:'numeric', month:'long', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-IN',  { ...istOpts, hour:'2-digit', minute:'2-digit' });
+  const sep     = '─'.repeat(36);
   let lines = [
-    '      AYINI HOME PRODUCTS',
-    '    Coimbatore, Tamil Nadu',
-    '      +91 7397130039',
+    `      ${SHOP_NAME}`,
+    `  ${SHOP_ADDR1}`,
+    `  ${SHOP_ADDR2}`,
+    `        ${SHOP_PHONE}`,
     sep,
     `Bill No  : #${String(currentBillNo).padStart(3,'0')}`,
     `Date     : ${dateStr}`,
@@ -251,36 +261,38 @@ function buildReceiptText() {
   lines.push(sep);
   lines.push(`Subtotal          : ₹${sub.toFixed(2)}`);
   if (gst > 0) {
-    lines.push(`CGST (${gst/2}%)          : ₹${cgst.toFixed(2)}`);
-    lines.push(`SGST (${gst/2}%)          : ₹${sgst.toFixed(2)}`);
-    lines.push(`GST Total (${gst}%)    : ₹${gstAmt.toFixed(2)}`);
+    lines.push(`CGST (${gst/2}%)       : ₹${cgst.toFixed(2)}`);
+    lines.push(`SGST (${gst/2}%)       : ₹${sgst.toFixed(2)}`);
+    lines.push(`GST Total (${gst}%)  : ₹${gstAmt.toFixed(2)}`);
   }
-  if (disc > 0) lines.push(`Discount          : -₹${disc.toFixed(2)}`);
+  if (discPct > 0) lines.push(`Discount (${discPct}%)    : -₹${discAmt.toFixed(2)}`);
   lines.push(`TOTAL PAYABLE     : ₹${total.toFixed(2)}`);
   lines.push(sep);
-  lines.push('  Thank you for shopping with us!');
+  lines.push('  Thank you! / நன்றி!');
+  lines.push('  ✦ VISIT AGAIN ✦');
   lines.push('  Ayini — Pure. Natural. Homemade.');
+  lines.push(`  Catalogue: ${SHOP_CATALOG}`);
   return lines.join('\n');
 }
 
-// ── HTML RECEIPT — bilingual (Tamil+English) + UPI QR code ──
+// ── HTML Receipt — bilingual + QR + full address ──────────────────────────────
 function buildReceiptHTML() {
   const custName   = document.getElementById('custName').value || 'Walk-in Customer';
   const custMobile = document.getElementById('custMobile').value || '—';
-  const gst    = parseFloat(document.getElementById('gstRate').value) || 0;
-  const disc   = parseFloat(document.getElementById('discount').value) || 0;
-  const mode   = document.getElementById('payMode').value;
-  const sub    = billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const gstAmt = sub * gst / 100;
-  const cgst   = gstAmt / 2;
-  const sgst   = gstAmt / 2;
-  const total  = Math.max(0, sub + gstAmt - disc);
-  const now    = new Date();
-  const ist    = { timeZone: 'Asia/Kolkata' };
+  const gst     = parseFloat(document.getElementById('gstRate').value) || 0;
+  const discPct = parseFloat(document.getElementById('discount').value) || 0;
+  const mode    = document.getElementById('payMode').value;
+  const sub     = billItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const gstAmt  = sub * gst / 100;
+  const cgst    = gstAmt / 2;
+  const sgst    = gstAmt / 2;
+  const discAmt = sub * discPct / 100;
+  const total   = Math.max(0, sub + gstAmt - discAmt);
+  const now     = new Date();
+  const ist     = { timeZone: 'Asia/Kolkata' };
   const dateStr = now.toLocaleDateString('en-IN', { ...ist, day:'numeric', month:'long', year:'numeric' });
   const timeStr = now.toLocaleTimeString('en-IN', { ...ist, hour:'2-digit', minute:'2-digit' });
 
-  // UPI QR — scan to pay exact bill amount
   const upiStr = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total.toFixed(2)}&cu=INR`;
   const qrURL  = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(upiStr)}`;
 
@@ -293,66 +305,63 @@ function buildReceiptHTML() {
     </tr>`).join('');
 
   return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"/>
+<html><head><meta charset="UTF-8"/>
 <title>Bill — Ayini</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Courier New',monospace; font-size:13px; color:#1c1a16; background:#fff; max-width:320px; margin:0 auto; padding:16px; }
   .center { text-align:center; }
-  .sep { border:none; border-top:1px dashed #999; margin:8px 0; }
+  .sep       { border:none; border-top:1px dashed #999; margin:8px 0; }
   .sep-solid { border:none; border-top:2px solid #1a5c35; margin:8px 0; }
-  .brand-en { font-size:17px; font-weight:700; color:#1a5c35; letter-spacing:1px; }
-  .brand-ta { font-size:13px; color:#2d7a4f; margin-top:2px; font-family:sans-serif; }
-  .addr { font-size:11px; color:#666; margin-top:4px; }
+  .brand-en  { font-size:17px; font-weight:700; color:#1a5c35; letter-spacing:1px; }
+  .brand-ta  { font-size:13px; color:#2d7a4f; margin-top:2px; font-family:sans-serif; }
+  .addr      { font-size:11px; color:#555; margin-top:3px; line-height:1.5; }
   .meta-table { width:100%; margin:8px 0; }
   .meta-table td { font-size:12px; padding:2px 0; vertical-align:top; }
-  .meta-table td:first-child { color:#555; width:110px; }
-  .meta-table td:last-child { font-weight:600; }
+  .meta-table td:first-child { color:#555; width:115px; }
+  .meta-table td:last-child  { font-weight:600; }
   .items-table { width:100%; border-collapse:collapse; margin:8px 0; }
   .items-table th { font-size:11px; text-transform:uppercase; border-bottom:2px solid #1a5c35; padding:5px 4px; text-align:left; color:#444; }
-  .items-table th:nth-child(2) { text-align:center; }
-  .items-table th:nth-child(3), .items-table th:nth-child(4) { text-align:right; }
+  .items-table th:nth-child(n+2) { text-align:right; }
+  .items-table th:nth-child(2)   { text-align:center; }
   .totals { margin-top:6px; }
   .total-row { display:flex; justify-content:space-between; font-size:13px; padding:2px 0; }
   .total-row.grand { font-size:15px; font-weight:700; color:#1a5c35; border-top:2px solid #1a5c35; margin-top:6px; padding-top:6px; }
-  .qr-section { text-align:center; margin:12px 0 6px; }
-  .footer-line { font-size:11px; color:#555; margin-top:3px; }
-  .footer-green { font-size:11px; color:#1a5c35; font-weight:600; margin-top:4px; }
+  .qr-section { text-align:center; margin:10px 0 6px; }
+  .footer-line  { font-size:11px; color:#555; margin-top:3px; }
+  .footer-green { font-size:11px; color:#1a5c35; font-weight:600; margin-top:3px; }
+  .visit-again  { font-size:14px; font-weight:700; color:#1a5c35; letter-spacing:2px; margin:6px 0; }
+  .catalog-link { font-size:11px; color:#2980b9; margin-top:4px; word-break:break-all; }
   @media print { body { padding:4px; } }
-</style>
-</head>
-<body>
+</style></head><body>
 
 <div class="center">
-  <div class="brand-en">🌿 AYINI HOME PRODUCTS</div>
+  <div class="brand-en">🌿 ${SHOP_NAME}</div>
   <div class="brand-ta">அயினி வீட்டு பொருட்கள்</div>
-  <div class="addr">Coimbatore, Tamil Nadu &nbsp;|&nbsp; +91 7397130039</div>
+  <div class="addr">${SHOP_ADDR1}<br>${SHOP_ADDR2}</div>
+  <div class="addr">${SHOP_PHONE}</div>
 </div>
 
 <hr class="sep-solid"/>
 
 <table class="meta-table">
-  <tr><td>Bill No / பில் எண்</td>  <td>#${String(currentBillNo).padStart(3,'0')}</td></tr>
-  <tr><td>Date / தேதி</td>          <td>${dateStr}</td></tr>
-  <tr><td>Time / நேரம்</td>          <td>${timeStr}</td></tr>
+  <tr><td>Bill No / பில் எண்</td>      <td>#${String(currentBillNo).padStart(3,'0')}</td></tr>
+  <tr><td>Date / தேதி</td>              <td>${dateStr}</td></tr>
+  <tr><td>Time / நேரம்</td>              <td>${timeStr}</td></tr>
   <tr><td>Customer / வாடிக்கையாளர்</td><td>${custName}</td></tr>
-  <tr><td>Mobile / தொலைபேசி</td>    <td>${custMobile}</td></tr>
-  <tr><td>Payment / கட்டணம்</td>    <td>${mode}</td></tr>
+  <tr><td>Mobile / தொலைபேசி</td>        <td>${custMobile}</td></tr>
+  <tr><td>Payment / கட்டணம்</td>        <td>${mode}</td></tr>
 </table>
 
 <hr class="sep"/>
 
 <table class="items-table">
-  <thead>
-    <tr>
-      <th>Item / பொருள்</th>
-      <th style="text-align:center">Qty</th>
-      <th style="text-align:right">Rate</th>
-      <th style="text-align:right">Total</th>
-    </tr>
-  </thead>
+  <thead><tr>
+    <th>Item / பொருள்</th>
+    <th style="text-align:center">Qty</th>
+    <th style="text-align:right">Rate</th>
+    <th style="text-align:right">Total</th>
+  </tr></thead>
   <tbody>${itemRows}</tbody>
 </table>
 
@@ -363,9 +372,11 @@ function buildReceiptHTML() {
   ${gst > 0 ? `
   <div class="total-row" style="color:#555;font-size:12px"><span>&nbsp;↳ CGST (${gst/2}%)</span><span>₹${cgst.toFixed(2)}</span></div>
   <div class="total-row" style="color:#555;font-size:12px"><span>&nbsp;↳ SGST (${gst/2}%)</span><span>₹${sgst.toFixed(2)}</span></div>
-  <div class="total-row"><span>GST Total (${gst}%)</span><span>₹${gstAmt.toFixed(2)}</span></div>` : ''}
-  ${disc > 0 ? `
-  <div class="total-row" style="color:#c0392b"><span>Discount / தள்ளுபடி</span><span>−₹${disc.toFixed(2)}</span></div>` : ''}
+  <div class="total-row"><span>GST (${gst}%)</span><span>₹${gstAmt.toFixed(2)}</span></div>` : ''}
+  ${discPct > 0 ? `
+  <div class="total-row" style="color:#c0392b">
+    <span>Discount / தள்ளுபடி (${discPct}%)</span><span>−₹${discAmt.toFixed(2)}</span>
+  </div>` : ''}
   <div class="total-row grand">
     <span>TOTAL / செலுத்த வேண்டியது</span>
     <span>₹${total.toFixed(2)}</span>
@@ -386,24 +397,55 @@ ${mode !== 'Credit' ? `
 
 <hr class="sep-solid"/>
 <div class="center">
-  <div class="footer-line">Thank you for shopping with us!</div>
-  <div class="footer-line" style="font-family:sans-serif">எங்களிடம் வாங்கியதற்கு நன்றி!</div>
+  <div class="visit-again">✦ VISIT AGAIN ✦</div>
+  <div class="footer-line">Thank you! / எங்களிடம் வாங்கியதற்கு நன்றி!</div>
   <div class="footer-green">Ayini — Pure. Natural. Homemade.</div>
   <div class="footer-green" style="font-family:sans-serif">தூய்மையான · இயற்கையான · வீட்டில் தயாரிக்கப்பட்டது</div>
+  <div class="catalog-link">📦 Our Catalogue: ${SHOP_CATALOG}</div>
 </div>
 
-</body>
-</html>`;
+</body></html>`;
+}
+
+// ── Helper: open receipt in new window using Blob URL (fixes Electron popup) ──
+function openReceiptWindow() {
+  const html = buildReceiptHTML();
+  const blob = new Blob([html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const w    = window.open(url, '_blank', 'width=420,height=720');
+  if (!w) { showToast('⚠ Pop-up blocked — allow pop-ups and try again'); return; }
+  setTimeout(() => {
+    try { w.print(); } catch(e) {}
+    URL.revokeObjectURL(url);
+  }, 600);
+}
+
+// ── WhatsApp lock: disable Process Payment & Print until WhatsApp is sent ────
+function setActionLock(locked) {
+  const btnProcess = document.getElementById('btnProcess');
+  const btnPrint   = document.getElementById('btnPrint');
+  if (!btnProcess || !btnPrint) return;
+  if (locked) {
+    btnProcess.disabled = true;
+    btnPrint.disabled   = true;
+    btnProcess.title    = 'Send WhatsApp first';
+    btnPrint.title      = 'Send WhatsApp first';
+    btnProcess.style.opacity = '0.45';
+    btnPrint.style.opacity   = '0.45';
+  } else {
+    btnProcess.disabled = false;
+    btnPrint.disabled   = false;
+    btnProcess.title    = '';
+    btnPrint.title      = '';
+    btnProcess.style.opacity = '1';
+    btnPrint.style.opacity   = '1';
+  }
 }
 
 function processPayment() {
   if (billItems.length === 0) { showToast('Add products to the bill first'); return; }
-  // Print HTML receipt with QR + bilingual
-  const w = window.open('', '_blank', 'width=400,height=720');
-  w.document.write(buildReceiptHTML());
-  w.document.close();
-  setTimeout(() => w.print(), 500);
-  // Show confirm modal to save
+  if (!whatsappSent) { showToast('📱 Please send WhatsApp first'); return; }
+  openReceiptWindow();
   document.getElementById('receiptPreview').textContent = buildReceiptText();
   document.getElementById('payModal').classList.add('open');
 }
@@ -413,13 +455,14 @@ function closeModal() {
 }
 
 async function confirmPayment() {
-  const btn    = document.getElementById('confirmBtn');
-  const gst    = parseFloat(document.getElementById('gstRate').value);
-  const disc   = parseFloat(document.getElementById('discount').value) || 0;
-  const mode   = document.getElementById('payMode').value;
-  const sub    = billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const gstAmt = sub * gst / 100;
-  const total  = Math.max(0, sub + gstAmt - disc);
+  const btn     = document.getElementById('confirmBtn');
+  const gst     = parseFloat(document.getElementById('gstRate').value) || 0;
+  const discPct = parseFloat(document.getElementById('discount').value) || 0;
+  const mode    = document.getElementById('payMode').value;
+  const sub     = billItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const gstAmt  = sub * gst / 100;
+  const discAmt = sub * discPct / 100;
+  const total   = Math.max(0, sub + gstAmt - discAmt);
 
   btn.textContent = 'Saving...'; btn.disabled = true;
   try {
@@ -432,12 +475,10 @@ async function confirmPayment() {
       gst_amount:   gstAmt,
       cgst_amount:  gstAmt / 2,
       sgst_amount:  gstAmt / 2,
-      discount:     disc,
+      discount:     discAmt,
       total:        total,
       items: billItems.map(i => ({ product_id: i.id, name: i.name, price: i.price, qty: i.qty, total: i.price * i.qty }))
     });
-
-    // Refresh product stock from server
     allProducts = await Products.getAll();
     currentBillNo++;
     closeModal();
@@ -452,10 +493,8 @@ async function confirmPayment() {
 
 function printBill() {
   if (billItems.length === 0) { showToast('Add products to the bill first'); return; }
-  const w = window.open('', '_blank', 'width=400,height=720');
-  w.document.write(buildReceiptHTML());
-  w.document.close();
-  setTimeout(() => w.print(), 500);
+  if (!whatsappSent) { showToast('📱 Please send WhatsApp first'); return; }
+  openReceiptWindow();
 }
 
 function sendWhatsApp() {
@@ -465,14 +504,20 @@ function sendWhatsApp() {
   const msg = encodeURIComponent(buildReceiptText());
   const num = mobile.startsWith('91') ? mobile : '91' + mobile;
   window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+  // Unlock Process Payment and Print after WhatsApp is sent
+  whatsappSent = true;
+  setActionLock(false);
+  showToast('✓ WhatsApp opened — you can now process payment');
 }
 
 function resetBill() {
-  billItems = [];
+  billItems    = [];
+  whatsappSent = false;
+  setActionLock(true); // lock again for next bill
   document.getElementById('custName').value   = '';
   document.getElementById('custMobile').value = '';
   document.getElementById('discount').value   = 0;
-  document.getElementById('gstRate').value    = '5';
+  document.getElementById('gstRate').value    = '0';
   document.getElementById('payMode').value    = 'Cash';
   document.getElementById('billNo').textContent = `Bill #${String(currentBillNo).padStart(3,'0')}`;
   renderBill();
