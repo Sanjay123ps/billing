@@ -4,14 +4,106 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>Mobile POS — Ayini</title>
+
+<!-- ═══════════════════════════════════════
+     PWA — Meta Tags
+═══════════════════════════════════════ -->
+<meta name="theme-color" content="#2e7d32"/>
+<meta name="description" content="Mobile point-of-sale and billing system for Ayini Home Products"/>
+
+<!-- Android / Chrome PWA -->
+<meta name="mobile-web-app-capable" content="yes"/>
+
+<!-- iOS Safari PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Ayini POS"/>
+
+<!-- Manifest -->
+<link rel="manifest" href="/manifest.json"/>
+
+<!-- Apple touch icons (iOS Home Screen) -->
+<link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png"/>
+
+<!-- Splash screen color for iOS -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+
+<!-- ═══════════════════════════════════════
+     Fonts & Styles
+═══════════════════════════════════════ -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css"/>
 <style>
   body { margin: 0; padding: 0; overflow: hidden; }
+
+  /* PWA install prompt banner */
+  #pwa-install-banner {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #1b5e20;
+    color: #fff;
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    z-index: 9999;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.2);
+  }
+  #pwa-install-banner.visible { display: flex; }
+  #pwa-install-banner span { flex: 1; }
+  #pwa-install-btn {
+    background: #fff;
+    color: #1b5e20;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+  }
+  #pwa-dismiss-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.6);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+  }
+
+  /* Offline indicator */
+  #offline-bar {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: #b71c1c;
+    color: #fff;
+    text-align: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 6px;
+    z-index: 10000;
+  }
+  #offline-bar.visible { display: block; }
 </style>
 </head>
 <body>
+
+<!-- Offline bar -->
+<div id="offline-bar">⚡ You're offline — billing data may not sync until connection is restored</div>
+
+<!-- PWA install banner (shown on first visit if not installed) -->
+<div id="pwa-install-banner">
+  <span>📲 Install Ayini POS on your phone for faster access</span>
+  <button id="pwa-install-btn">Install</button>
+  <button id="pwa-dismiss-btn">×</button>
+</div>
 
 <div class="mpos-wrap">
 
@@ -445,5 +537,83 @@ function mposReset() {
 
 document.addEventListener('DOMContentLoaded', mposInit);
 </script>
+
+<!-- ═══════════════════════════════════════
+     PWA — Service Worker Registration
+     + Install Banner + Offline Detection
+═══════════════════════════════════════ -->
+<script>
+// ── Service Worker ──────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        console.log('[PWA] Service worker registered, scope:', reg.scope);
+
+        // Check for updates every time the page loads
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('🔄 App updated — refresh to get the latest version');
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[PWA] Service worker registration failed:', err));
+  });
+}
+
+// ── Install Banner ───────────────────────
+let deferredInstallPrompt = null;
+const installBanner  = document.getElementById('pwa-install-banner');
+const installBtn     = document.getElementById('pwa-install-btn');
+const dismissBtn     = document.getElementById('pwa-dismiss-btn');
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+
+  // Only show banner if user hasn't dismissed it before
+  if (!localStorage.getItem('pwa-banner-dismissed')) {
+    installBanner.classList.add('visible');
+  }
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredInstallPrompt) return;
+  installBanner.classList.remove('visible');
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  console.log('[PWA] Install outcome:', outcome);
+  deferredInstallPrompt = null;
+});
+
+dismissBtn.addEventListener('click', () => {
+  installBanner.classList.remove('visible');
+  localStorage.setItem('pwa-banner-dismissed', '1');
+});
+
+// Hide banner if already installed (standalone mode)
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  installBanner.classList.remove('visible');
+}
+
+// ── Offline / Online Detection ──────────
+const offlineBar = document.getElementById('offline-bar');
+
+function updateOnlineStatus() {
+  if (!navigator.onLine) {
+    offlineBar.classList.add('visible');
+  } else {
+    offlineBar.classList.remove('visible');
+  }
+}
+
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus(); // run on load
+</script>
+
 </body>
 </html>
