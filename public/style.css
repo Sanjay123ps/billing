@@ -361,11 +361,15 @@ body {
 .modal-overlay.open { display: flex; }
 .modal-box {
   background: #fff; border-radius: var(--radius-lg);
-  border: 1px solid var(--border); width: 100%; max-width: 560px;
-  box-shadow: var(--shadow-lg); animation: slideUp 0.2s ease;
+  width: 100%; max-width: 520px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden; position: relative;
 }
-@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
 .modal-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--green-800); }
 .modal-close { background: none; border: none; cursor: pointer; font-size: 22px; color: var(--text-muted); padding: 0 4px; line-height: 1; }
 .modal-close:hover { color: var(--text-dark); }
@@ -421,6 +425,7 @@ body {
 .icon-btn.delete { color: var(--red-600); } .icon-btn.delete:hover { background: var(--red-100); }
 
 /* ===== MOBILE BOTTOM NAV ===== */
+/* ── CHANGED: now supports 6 tabs instead of 4 ── */
 .mobile-bottom-nav {
   display: none;
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
@@ -430,16 +435,16 @@ body {
   padding: 0; height: 60px;
 }
 .mobile-bottom-nav .mnav-items {
-  display: grid; grid-template-columns: repeat(4, 1fr); height: 100%;
+  display: grid; grid-template-columns: repeat(6, 1fr); height: 100%;
 }
 .mnav-item {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; text-decoration: none; color: rgba(255,255,255,0.55);
-  font-size: 10px; font-weight: 500; letter-spacing: 0.02em;
-  transition: color 0.15s; padding: 6px 4px;
+  gap: 2px; text-decoration: none; color: rgba(255,255,255,0.55);
+  font-size: 9px; font-weight: 500; letter-spacing: 0.01em;
+  transition: color 0.15s; padding: 4px 2px;
 }
 .mnav-item.active { color: var(--green-200); }
-.mnav-item svg { flex-shrink: 0; }
+.mnav-item svg { flex-shrink: 0; width: 18px; height: 18px; }
 
 /* ===== TABLET (≤ 900px) ===== */
 @media (max-width: 900px) {
@@ -506,7 +511,7 @@ body {
   .bill-co-name { font-size: 16px; }
   .customer-fields { grid-template-columns: 1fr; gap: 8px; }
   .bill-table th, .bill-table td { padding: 8px 10px; font-size: 12px; }
-  .col-price { display: none; } /* hide unit price col on mobile */
+  .col-price { display: none; }
   .item-price { display: none; }
 
   /* Footer controls: stack vertically */
@@ -528,6 +533,7 @@ body {
 
   /* ======== PAGE CONTAINER ======== */
   .page-container { padding: 1rem; }
+
   .page-header {
     flex-direction: column; align-items: flex-start; gap: 10px;
     margin-bottom: 1rem;
@@ -619,7 +625,7 @@ body {
 .mpos-prod-price { font-size: 14px; font-weight: 700; color: var(--green-700); }
 .mpos-prod-stock { font-size: 10px; margin-top: 2px; }
 
-/* Cart panel — slides up from bottom */
+/* Cart panel */
 .mpos-cart-panel {
   background: #fff; border-top: 1px solid var(--border);
   flex-shrink: 0;
@@ -701,7 +707,7 @@ body {
 .mpos-customer input::placeholder { color: rgba(255,255,255,0.4); }
 .mpos-customer input:focus { outline: none; border-color: rgba(255,255,255,0.6); }
 
-/* Checkout modal */
+/* ── CHANGED: Checkout modal with visible close button ── */
 .mpos-checkout-modal {
   display: none; position: fixed; inset: 0; z-index: 200;
   background: rgba(20,18,14,0.6); align-items: flex-end;
@@ -709,15 +715,35 @@ body {
 .mpos-checkout-modal.open { display: flex; }
 .mpos-checkout-box {
   background: #fff; width: 100%; border-radius: 20px 20px 0 0;
-  padding: 1.5rem; animation: slideUp 0.25s ease;
+  padding: 0; animation: slideUp 0.25s ease;
   max-height: 85vh; overflow-y: auto;
 }
-.mpos-checkout-title { font-family: 'Playfair Display',serif; font-size: 18px; font-weight: 700; color: var(--green-800); margin-bottom: 1.25rem; }
+.mpos-checkout-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: #fff; z-index: 2;
+}
+.mpos-checkout-title {
+  font-family: 'Playfair Display',serif; font-size: 18px; font-weight: 700; color: var(--green-800);
+}
+.mpos-checkout-close {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--cream-dark); border: 1px solid var(--border);
+  font-size: 20px; color: var(--text-mid); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1; transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mpos-checkout-close:active { background: var(--red-100); color: var(--red-600); }
+.mpos-checkout-body { padding: 1.25rem; }
 .mpos-receipt-pre { font-family: 'Courier New',monospace; font-size: 11px; background: var(--cream); padding: 1rem; border-radius: var(--radius); white-space: pre; overflow-x: auto; margin-bottom: 1.25rem; line-height: 1.6; }
 .mpos-checkout-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mpos-co-btn { padding: 13px; border-radius: var(--radius); border: 1px solid var(--border); font-family: 'DM Sans',sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
 .mpos-co-confirm { background: var(--green-700); color: #fff; border-color: var(--green-700); }
 .mpos-co-cancel { background: #fff; color: var(--text-mid); }
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 @media print {
   .navbar, .product-sidebar, .bill-footer, .action-bar,

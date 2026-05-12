@@ -220,14 +220,16 @@
 <!-- Checkout modal -->
 <div class="mpos-checkout-modal" id="mposModal">
   <div class="mpos-checkout-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <div class="mpos-checkout-header">
       <div class="mpos-checkout-title">Confirm Payment</div>
-      <button onclick="closeMposModal()" style="background:none;border:none;font-size:24px;color:var(--text-muted);cursor:pointer;line-height:1">×</button>
+      <button class="mpos-checkout-close" onclick="closeMposModal()">×</button>
     </div>
-    <div class="mpos-receipt-pre" id="mposReceiptPre"></div>
-    <div class="mpos-checkout-btns">
-      <button class="mpos-co-btn mpos-co-cancel" onclick="closeMposModal()">Cancel</button>
-      <button class="mpos-co-btn mpos-co-confirm" id="mposConfirmBtn" onclick="mposConfirm()">✓ Confirm &amp; Save</button>
+    <div class="mpos-checkout-body">
+      <div class="mpos-receipt-pre" id="mposReceiptPre"></div>
+      <div class="mpos-checkout-btns">
+        <button class="mpos-co-btn mpos-co-cancel" onclick="closeMposModal()">Cancel</button>
+        <button class="mpos-co-btn mpos-co-confirm" id="mposConfirmBtn" onclick="mposConfirm()">✓ Confirm &amp; Save</button>
+      </div>
     </div>
   </div>
 </div>
