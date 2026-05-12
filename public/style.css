@@ -447,7 +447,7 @@ body {
 .mnav-item svg { flex-shrink: 0; width: 18px; height: 18px; }
 
 /* ===== TABLET (≤ 900px) ===== */
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .reports-grid { grid-template-columns: 1fr; }
   .action-bar { grid-template-columns: 1fr 1fr; }
 }
