@@ -1,5 +1,12 @@
 // ===== AYINI — API CLIENT =====
-const API_BASE = window.location.origin + '/api';
+const API_BASE = (() => {
+  // In Capacitor Android app, use Railway URL directly
+  if (window.location.protocol === 'capacitor:' || window.location.hostname === 'localhost') {
+    return 'https://billing-production-64f7.up.railway.app/api';
+  }
+  // In browser (Railway deployment), use relative URL as before
+  return window.location.origin + '/api';
+})();
 
 // ===== TOKEN MANAGEMENT =====
 function getToken()       { return localStorage.getItem('ayini_token'); }
