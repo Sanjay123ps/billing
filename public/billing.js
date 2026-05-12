@@ -310,6 +310,17 @@ function buildReceiptHTML() {
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Courier New',monospace; font-size:13px; color:#1c1a16; background:#fff; max-width:320px; margin:0 auto; padding:16px; }
+  #close-btn {
+    position:fixed; top:12px; right:12px;
+    width:36px; height:36px;
+    background:#1a5c35; color:#fff;
+    border:none; border-radius:50%;
+    font-size:20px; line-height:1;
+    cursor:pointer; z-index:999;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,0.25);
+  }
+  @media print { #close-btn { display:none; } }
   .center { text-align:center; }
   .sep       { border:none; border-top:1px dashed #999; margin:8px 0; }
   .sep-solid { border:none; border-top:2px solid #1a5c35; margin:8px 0; }
@@ -334,6 +345,8 @@ function buildReceiptHTML() {
   .catalog-link { font-size:11px; color:#2980b9; margin-top:4px; word-break:break-all; }
   @media print { body { padding:4px; } }
 </style></head><body>
+
+<button id="close-btn" onclick="window.close()" title="Close">&#x2715;</button>
 
 <div class="center">
   <div class="brand-en">🌿 ${SHOP_NAME}</div>
