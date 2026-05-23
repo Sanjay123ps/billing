@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+f<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -18,7 +18,132 @@
     -webkit-text-fill-color: #1c1a16 !important;
     background-color: #ffffff !important;
   }
-  input::placeholder { color: #a09a8e !important; -webkit-text-fill-color: #a09a8e !important; }
+ input::placeholder { color: #a09a8e !important; -webkit-text-fill-color: #a09a8e !important; }
+
+  /* ===== CASH CHANGE MODAL ===== */
+  .cash-modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 150;
+    background: rgba(20,18,14,0.65);
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .cash-modal-overlay.open { display: flex; }
+  .cash-modal-box {
+    background: #fff; border-radius: 20px;
+    width: 100%; max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    overflow: hidden; animation: cashSlideUp 0.25s ease;
+  }
+  @keyframes cashSlideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .cash-modal-header {
+    background: linear-gradient(135deg, #2d5c14, #3B6D11);
+    padding: 1.25rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cash-modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px; font-weight: 700; color: #fff;
+  }
+  .cash-modal-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none;
+    color: #fff; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1; transition: background 0.15s;
+  }
+  .cash-modal-close:hover { background: rgba(255,255,255,0.25); }
+  .cash-modal-body { padding: 1.5rem; }
+  .cash-total-display {
+    background: #f2fae6; border: 1.5px solid #c0dd97;
+    border-radius: 12px; padding: 1rem 1.25rem;
+    text-align: center; margin-bottom: 1.25rem;
+  }
+  .cash-total-label {
+    font-size: 11px; font-weight: 600; color: #3B6D11;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+  }
+  .cash-total-amount {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px; font-weight: 700; color: #2d5c14;
+  }
+  .cash-input-group {
+    margin-bottom: 1rem;
+  }
+  .cash-input-label {
+    font-size: 12px; font-weight: 600; color: #4a4540;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 6px; display: block;
+  }
+  .cash-received-input {
+    width: 100%; padding: 14px 16px;
+    border: 2px solid #e0d8cc; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 22px; font-weight: 700;
+    color: #1c1a16 !important; -webkit-text-fill-color: #1c1a16 !important;
+    background: #fff !important;
+    text-align: center; letter-spacing: 1px;
+    transition: border-color 0.2s;
+  }
+  .cash-received-input:focus {
+    outline: none; border-color: #3B6D11;
+    box-shadow: 0 0 0 3px rgba(59,109,17,0.12);
+  }
+  .cash-balance-box {
+    border-radius: 12px; padding: 1rem 1.25rem;
+    text-align: center; margin-bottom: 1.25rem;
+    transition: all 0.2s;
+  }
+  .cash-balance-box.positive {
+    background: #f2fae6; border: 1.5px solid #c0dd97;
+  }
+  .cash-balance-box.zero {
+    background: #f2fae6; border: 1.5px solid #c0dd97;
+  }
+  .cash-balance-box.negative {
+    background: #FCEBEB; border: 1.5px solid #f5bcbc;
+  }
+  .cash-balance-label {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+  }
+  .cash-balance-box.positive .cash-balance-label,
+  .cash-balance-box.zero    .cash-balance-label { color: #3B6D11; }
+  .cash-balance-box.negative .cash-balance-label { color: #A32D2D; }
+  .cash-balance-amount {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px; font-weight: 700;
+  }
+  .cash-balance-box.positive .cash-balance-amount,
+  .cash-balance-box.zero    .cash-balance-amount { color: #2d5c14; }
+  .cash-balance-box.negative .cash-balance-amount { color: #A32D2D; }
+  .cash-balance-note {
+    font-size: 11px; margin-top: 4px; color: #8a8580;
+  }
+  .cash-modal-actions {
+    display: grid; grid-template-columns: 1fr 2fr; gap: 10px;
+    padding: 0 1.5rem 1.5rem;
+  }
+  .cash-btn {
+    padding: 13px; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+    border: none; cursor: pointer; transition: all 0.15s;
+  }
+  .cash-btn-cancel {
+    background: #f0ebe0; color: #4a4540;
+    border: 1px solid #e0d8cc;
+  }
+  .cash-btn-cancel:hover { background: #e8e2d5; }
+  .cash-btn-proceed {
+    background: #3B6D11; color: #fff;
+  }
+  .cash-btn-proceed:hover { background: #2d5c14; }
+  .cash-btn-proceed:disabled {
+    background: #c0dd97; color: #fff; cursor: not-allowed;
+  }
+</style>
 </style>
 </head>
 <body>
@@ -204,6 +329,45 @@
 </div>
 
 <div class="toast" id="toast"></div>
+  <!-- ===== CASH CHANGE CALCULATOR MODAL ===== -->
+<div class="cash-modal-overlay" id="cashModal">
+  <div class="cash-modal-box">
+    <div class="cash-modal-header">
+      <div class="cash-modal-title">💵 Cash Payment</div>
+      <button class="cash-modal-close" onclick="closeCashModal()">×</button>
+    </div>
+    <div class="cash-modal-body">
+      <div class="cash-total-display">
+        <div class="cash-total-label">Total Payable</div>
+        <div class="cash-total-amount" id="cashTotalDisplay">₹0.00</div>
+      </div>
+      <div class="cash-input-group">
+        <label class="cash-input-label">Amount Received from Customer</label>
+        <input
+          type="number"
+          id="cashReceived"
+          class="cash-received-input"
+          placeholder="0"
+          min="0"
+          inputmode="numeric"
+          oninput="calcBalance()"
+          onkeydown="if(event.key==='Enter') proceedCashPayment()"
+        />
+      </div>
+      <div class="cash-balance-box zero" id="cashBalanceBox">
+        <div class="cash-balance-label" id="cashBalanceLabel">Balance to Return</div>
+        <div class="cash-balance-amount" id="cashBalanceAmt">₹0.00</div>
+        <div class="cash-balance-note" id="cashBalanceNote">Enter amount received above</div>
+      </div>
+    </div>
+    <div class="cash-modal-actions">
+      <button class="cash-btn cash-btn-cancel" onclick="closeCashModal()">Cancel</button>
+      <button class="cash-btn cash-btn-proceed" id="cashProceedBtn" onclick="proceedCashPayment()" disabled>
+        Proceed →
+      </button>
+    </div>
+  </div>
+</div>
 <nav class="mobile-bottom-nav">
   <div class="mnav-items">
     <a href="index.html" class="mnav-item active">
@@ -269,6 +433,90 @@ sendWhatsApp = function () {
   if (digits.length !== 10) { showToast('⚠️ Enter a valid 10-digit mobile number for WhatsApp'); return; }
   _origSendWhatsApp();
 };
+  /* ===== CASH CHANGE CALCULATOR ===== */
+let _pendingCashTotal = 0;
+
+// Intercept processPayment for Cash mode
+const _baseProcessPayment = processPayment;
+processPayment = function () {
+  const n = document.getElementById('custName');
+  if (n && !n.value.trim()) n.value = 'Walk-in Customer';
+
+  const mode = document.getElementById('payMode').value;
+  if (mode === 'Cash') {
+    // Get current grand total
+    const totalEl = document.getElementById('grandTotal');
+    const totalText = totalEl ? totalEl.textContent.replace(/[₹,]/g, '') : '0';
+    _pendingCashTotal = parseFloat(totalText) || 0;
+
+    // Show cash modal
+    document.getElementById('cashTotalDisplay').textContent = '₹' + _pendingCashTotal.toFixed(2);
+    document.getElementById('cashReceived').value = '';
+    document.getElementById('cashBalanceAmt').textContent = '₹0.00';
+    document.getElementById('cashBalanceNote').textContent = 'Enter amount received above';
+    document.getElementById('cashBalanceBox').className = 'cash-balance-box zero';
+    document.getElementById('cashBalanceLabel').textContent = 'Balance to Return';
+    document.getElementById('cashProceedBtn').disabled = true;
+    document.getElementById('cashModal').classList.add('open');
+
+    // Auto-focus the input after animation
+    setTimeout(() => document.getElementById('cashReceived').focus(), 100);
+  } else {
+    _baseProcessPayment();
+  }
+};
+
+function calcBalance() {
+  const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+  const balance  = received - _pendingCashTotal;
+  const balBox   = document.getElementById('cashBalanceBox');
+  const balAmt   = document.getElementById('cashBalanceAmt');
+  const balNote  = document.getElementById('cashBalanceNote');
+  const balLabel = document.getElementById('cashBalanceLabel');
+  const procBtn  = document.getElementById('cashProceedBtn');
+
+  if (received <= 0) {
+    balAmt.textContent  = '₹0.00';
+    balNote.textContent = 'Enter amount received above';
+    balBox.className    = 'cash-balance-box zero';
+    balLabel.textContent = 'Balance to Return';
+    procBtn.disabled    = true;
+    return;
+  }
+
+  if (balance < 0) {
+    // Not enough cash
+    balLabel.textContent = 'Amount Short';
+    balAmt.textContent  = '₹' + Math.abs(balance).toFixed(2);
+    balNote.textContent = 'Customer needs to pay more';
+    balBox.className    = 'cash-balance-box negative';
+    procBtn.disabled    = true;
+  } else if (balance === 0) {
+    balLabel.textContent = 'Exact Change';
+    balAmt.textContent  = '₹0.00';
+    balNote.textContent = '✓ Perfect — no change needed';
+    balBox.className    = 'cash-balance-box zero';
+    procBtn.disabled    = false;
+  } else {
+    balLabel.textContent = 'Balance to Return';
+    balAmt.textContent  = '₹' + balance.toFixed(2);
+    balNote.textContent = 'Return this amount to customer';
+    balBox.className    = 'cash-balance-box positive';
+    procBtn.disabled    = false;
+  }
+}
+
+function proceedCashPayment() {
+  const received = parseFloat(document.getElementById('cashReceived').value) || 0;
+  if (received < _pendingCashTotal) return;
+  closeCashModal();
+  // Small delay so cash modal closes before payment modal opens
+  setTimeout(() => _baseProcessPayment(), 150);
+}
+
+function closeCashModal() {
+  document.getElementById('cashModal').classList.remove('open');
+}
 </script>
 </body>
 </html>
