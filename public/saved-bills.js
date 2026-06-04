@@ -6,6 +6,13 @@ async function init() {
   requireAuth();
   try {
     allBills = await Bills.getAll({ limit: 99999 });
+    allBills = allBills.map(b => ({
+  ...b,
+  total: parseFloat(b.total || 0),
+  subtotal: parseFloat(b.subtotal || 0),
+  gst_amount: parseFloat(b.gst_amount || 0),
+  gst_rate: parseFloat(b.gst_rate || 0)
+}));
     renderStats();
     renderBillsGrid(allBills);
   } catch(e) {
@@ -195,20 +202,20 @@ function whatsappPopupBill() {
   const num = mobile.startsWith('91') ? mobile : '91' + mobile;
   window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
 }
-
-async function deletePopupBill() {
+function editPopupBill() {
   if (!currentPopupBill) return;
-  if (!confirm(`Delete Bill #${String(currentPopupBill.bill_no).padStart(3,'0')}? This cannot be undone.`)) return;
-  try {
-    await Bills.delete(currentPopupBill.id);
-    allBills = allBills.filter(b => b.id !== currentPopupBill.id);
-    closePopup();
-    renderStats();
-    filterBills();
-    showToast(`Bill #${String(currentPopupBill.bill_no).padStart(3,'0')} deleted`);
-  } catch(e) {
-    showToast('Error deleting bill');
-  }
+
+  // Store full bill for form restoration
+  sessionStorage.setItem('editing_bill', JSON.stringify(currentPopupBill));
+  // Store the original bill ID so confirmPayment can delete-then-recreate
+  sessionStorage.setItem('editing_bill_id',      String(currentPopupBill.id));
+  sessionStorage.setItem('editing_bill_no',      String(currentPopupBill.bill_no));
+  sessionStorage.setItem('editing_bill_deleted', '0');
+
+  closePopup();
+  window.location.href = 'index.html?edit=' + currentPopupBill.id;
 }
+
+// deletePopupBill removed — Delete button replaced by Edit button.
 
 document.addEventListener('DOMContentLoaded', init);

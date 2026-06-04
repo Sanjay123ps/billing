@@ -1,13 +1,16 @@
 // ===== AYINI — API CLIENT =====
 const API_BASE = (() => {
-  // In Capacitor Android app, use Railway URL directly
-  if (window.location.protocol === 'capacitor:' || window.location.hostname === 'localhost') {
+  // Electron desktop app — use local Express server
+  if (window.location.hostname === 'localhost') {
+    return window.location.origin + '/api';   // e.g. http://localhost:5757/api
+  }
+  // Capacitor Android app — update this URL if you redeploy a backend
+  if (window.location.protocol === 'capacitor:') {
     return 'https://billing-production-64f7.up.railway.app/api';
   }
-  // In browser (Railway deployment), use relative URL as before
+  // Browser/web deployment
   return window.location.origin + '/api';
 })();
-
 // ===== TOKEN MANAGEMENT =====
 function getToken()       { return localStorage.getItem('ayini_token'); }
 function setToken(t)      { localStorage.setItem('ayini_token', t); }
@@ -23,8 +26,19 @@ async function apiFetch(path, options = {}) {
   try {
     const res = await fetch(API_BASE + path, { ...options, headers: { ...headers, ...options.headers } });
     if (res.status === 401) { clearToken(); window.location.href = '/login.html'; return null; }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+   let data = null;
+try {
+  data = await res.json();
+} catch {
+  data = {};
+}
+   if (!res.ok) {
+  throw new Error(
+    data?.error ||
+    data?.message ||
+    `Request failed (${res.status})`
+  );
+}
     return data;
   } catch (e) {
     console.error('API error:', e.message);

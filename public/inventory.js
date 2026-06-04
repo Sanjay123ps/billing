@@ -1,6 +1,32 @@
 // ===== INVENTORY PAGE JS — API VERSION =====
 let products = [];
 
+function setFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.borderColor = '#e53e3e';
+  el.style.boxShadow  = '0 0 0 3px rgba(229,62,62,0.18)';
+  // show inline error below the field
+  const errId = id + '_err';
+  let errEl = document.getElementById(errId);
+  if (!errEl) {
+    errEl = document.createElement('div');
+    errEl.id = errId;
+    errEl.style.cssText = 'color:#e53e3e;font-size:11px;margin-top:3px;font-weight:600';
+    el.parentNode.insertBefore(errEl, el.nextSibling);
+  }
+  errEl.textContent = msg;
+}
+
+function clearFieldErrors() {
+  ['editCode','editName','editPrice','editStock','editCat','editUnit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.borderColor = ''; el.style.boxShadow = ''; }
+    const errEl = document.getElementById(id + '_err');
+    if (errEl) errEl.textContent = '';
+  });
+}
+
 async function init() {
   requireAuth();
   products = await Products.getAll();
@@ -9,11 +35,16 @@ async function init() {
   renderInvTable(products);
 }
 
+
 function renderStats() {
   const total    = products.length;
   const lowStock = products.filter(p => p.stock > 0 && p.stock <= 10).length;
   const outStock = products.filter(p => p.stock === 0).length;
-  const value    = products.reduce((s, p) => s + p.price * p.stock, 0);
+  const value = products.reduce((s, p) => {
+  const price = parseFloat(p.price) || 0;
+  const stock = parseFloat(p.stock) || 0;
+  return s + (price * stock);
+}, 0);
   document.getElementById('invStats').innerHTML = `
     <div class="stat-card stat-green"><div class="stat-label">Total Products</div><div class="stat-value">${total}</div><div class="stat-sub">Across all categories</div></div>
     <div class="stat-card stat-teal"><div class="stat-label">Stock Value</div><div class="stat-value">₹${(value/1000).toFixed(1)}k</div><div class="stat-sub">Total inventory worth</div></div>
@@ -33,11 +64,36 @@ function filterInv() {
   const cat = document.getElementById('catFilter').value;
   const st  = document.getElementById('stockFilter').value;
   let list  = products;
-  if (q)   list = list.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+  if (q) {
+  list = list.filter(p =>
+    (p.name || '').toLowerCase().includes(q) ||
+    (p.category || '').toLowerCase().includes(q) ||
+    String(p.code || '').includes(q)
+  );
+}
   if (cat) list = list.filter(p => p.category === cat);
   if (st === 'low') list = list.filter(p => p.stock > 0 && p.stock <= 10);
   else if (st === 'out') list = list.filter(p => p.stock === 0);
   else if (st === 'ok')  list = list.filter(p => p.stock > 10);
+  // ── Sort ──────────────────────────────────────────
+  const sort = document.getElementById('sortFilter')?.value || '';
+  if (sort) {
+    const [field, dir] = sort.split('_');
+    list = [...list].sort((a, b) => {
+      let av, bv;
+      if (field === 'code') {
+        av = a.code ?? Infinity;
+        bv = b.code ?? Infinity;
+      } else if (field === 'stock') {
+        av = parseFloat(a.stock) || 0;
+        bv = parseFloat(b.stock) || 0;
+      } else if (field === 'price') {
+        av = parseFloat(a.price) || 0;
+        bv = parseFloat(b.price) || 0;
+      }
+      return dir === 'asc' ? av - bv : bv - av;
+    });
+  }
   renderInvTable(list);
 }
 
@@ -90,7 +146,7 @@ function openAddProduct() {
   document.getElementById('editCode').value  = '';
   document.getElementById('editName').value  = '';
   document.getElementById('editPrice').value = '';
-  document.getElementById('editStock').value = '';
+ document.getElementById('editStock').value = '0';
   document.getElementById('editCat').value   = 'Masala Items';
   document.getElementById('editUnit').value  = 'pack';
   document.getElementById('productModal').classList.add('open');
@@ -111,30 +167,101 @@ function openEditProduct(id) {
 }
 
 async function saveProduct() {
+  clearFieldErrors();
+  const btn = document.querySelector('#productModal .save-btn');
+
   const name  = document.getElementById('editName').value.trim();
   const price = parseFloat(document.getElementById('editPrice').value);
-  const stock = parseInt(document.getElementById('editStock').value);
-  const cat   = document.getElementById('editCat').value;
-  const unit  = document.getElementById('editUnit').value;
-  const code  = parseInt(document.getElementById('editCode').value) || null;
-  const id    = parseInt(document.getElementById('editId').value);
-  if (!name || isNaN(price) || isNaN(stock)) { showToast('Please fill all fields'); return; }
+  const stock = parseInt(document.getElementById('editStock').value, 10);
+  const cat   = document.getElementById('editCat').value.trim();
+  const unit  = document.getElementById('editUnit').value.trim();
+
+  const codeInput = document.getElementById('editCode').value.trim();
+  const code = codeInput ? parseInt(codeInput, 10) : null;
+
+  const idInput = document.getElementById('editId').value;
+  const id = idInput ? parseInt(idInput, 10) : null;
+
+  if (!name) {
+    setFieldError('editName', 'Product name is required');
+    document.getElementById('editName').focus();
+    return;
+  }
+
+  if (isNaN(price) || price < 0) {
+    setFieldError('editPrice', 'Enter a valid price');
+    document.getElementById('editPrice').focus();
+    return;
+  }
+
+  if (isNaN(stock) || stock < 0) {
+    setFieldError('editStock', 'Enter a valid stock number');
+    document.getElementById('editStock').focus();
+    return;
+  }
 
   try {
-    if (id) {
-      const updated = await Products.update(id, { code, name, category: cat, price, stock, unit });
-      const idx = products.findIndex(x => x.id === id);
-      if (idx !== -1) products[idx] = updated;
-    } else {
-      const newProd = await Products.create({ code, name, category: cat, price, stock, unit });
-      products.push(newProd);
-      populateCatFilter();
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
     }
-    closeProdModal();
+
+    const payload = {
+      code,
+      name,
+      category: cat || 'General',
+      price: Number(price),
+      stock: Number(stock),
+      unit: unit || 'pcs'
+    };
+
+    if (id) {
+      const updated = await Products.update(id, payload);
+
+      const idx = products.findIndex(x => x.id === id);
+
+      if (idx !== -1) {
+        products[idx] = {
+          ...products[idx],
+          ...updated
+        };
+      }
+
+      showToast('Product updated!');
+    } else {
+      const created = await Products.create(payload);
+
+      if (!created || !created.id) {
+        throw new Error('Product save failed');
+      }
+
+      products.unshift({ ...payload, ...created });
+
+      populateCatFilter();
+
+      showToast('Product added!');
+    }
+
     renderStats();
     filterInv();
-    showToast(id ? 'Product updated!' : 'Product added!');
-  } catch(e) { showToast('Error: ' + e.message); }
+    closeProdModal();
+
+  } catch (e) {
+    console.error(e);
+    const msg = e.message || 'Unable to save product';
+    if (msg.toLowerCase().includes('code already exists') || msg.toLowerCase().includes('code')) {
+      setFieldError('editCode', '⚠ This code is already used by another product');
+      document.getElementById('editCode').focus();
+      document.getElementById('editCode').select();
+    } else {
+      showToast('Error: ' + msg);
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Save Product';
+    }
+  }
 }
 
 async function deleteProduct(id) {
@@ -149,6 +276,7 @@ async function deleteProduct(id) {
 }
 
 function closeProdModal() {
+  clearFieldErrors();
   document.getElementById('productModal').classList.remove('open');
 }
 

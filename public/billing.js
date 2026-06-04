@@ -14,6 +14,63 @@ const SHOP_CATALOG = 'https://wa.me/c/917397130039';
 const UPI_ID       = '7397130039@upi';
 const UPI_NAME     = 'Ayini Home Products';
 
+// ── Grinding Rates ───────────────────────────────────────────────────────────
+function getGrindingRate() {
+  return parseFloat(localStorage.getItem('grinding_idly_maavu_rate')) || 10;
+}
+function setGrindingRate(r) {
+  localStorage.setItem('grinding_idly_maavu_rate', r);
+}
+
+const GRINDING_RATES = {
+  idly_maavu: {
+    label: 'Idly Maavu Grinding',
+    get rate() { return getGrindingRate(); },
+    unit: 'kg'
+  },
+};
+
+function addGrindingService(type, weightKg) {
+  const service = GRINDING_RATES[type];
+
+  if (!service) {
+    showToast('Invalid grinding service');
+    return;
+  }
+
+  const weight = parseFloat(weightKg);
+
+  if (!weight || weight <= 0) {
+    showToast('Enter valid weight');
+    return;
+  }
+
+  const existing = billItems.find(i => i.id === `grinding_${type}`);
+
+  const total = service.rate * weight;
+
+  if (existing) {
+    existing.qty = weight;
+    existing.price = service.rate;
+    existing.total = total;
+  } else {
+    billItems.push({
+      id: `grinding_${type}`,
+      name: service.label,
+      category: 'Services',
+      price: service.rate,
+      qty: weight,
+      stock: 9999,
+      unit: service.unit,
+      is_service: true,
+      total
+    });
+  }
+
+  renderBill();
+}
+
+
 async function init() {
   requireAuth();
   try {
@@ -28,6 +85,7 @@ async function init() {
     document.getElementById('billDt').textContent = new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day:'numeric', month:'long', year:'numeric' });
     document.getElementById('codeInput')?.focus();
     setActionLock(true); // lock Process Payment & Print until WhatsApp sent
+    initGrindingPanel();
   } catch(e) {
     showToast('Failed to load products');
   }
@@ -131,18 +189,21 @@ function addToBill(pid, qty = 1) {
 }
 
 function changeQty(pid, delta) {
-  const item = billItems.find(x => x.id === pid);
-  const prod = allProducts.find(x => x.id === pid);
+  // pid may be numeric (product) or string (service like 'grinding_idly_maavu')
+  const idMatch = x => String(x.id) === String(pid);
+  const item = billItems.find(idMatch);
   if (!item) return;
+  if (item.is_service) return; // services edited via grinding panel only
+  const prod = allProducts.find(x => x.id === item.id);
   const newQty = item.qty + delta;
   if (newQty < 1) { removeItem(pid); return; }
-  if (newQty > prod.stock) { showToast(`Max stock: ${prod.stock}`); return; }
+  if (prod && newQty > prod.stock) { showToast(`Max stock: ${prod.stock}`); return; }
   item.qty = newQty;
   renderBill();
 }
 
 function removeItem(pid) {
-  billItems = billItems.filter(x => x.id !== pid);
+  billItems = billItems.filter(x => String(x.id) !== String(pid));
   renderBill();
 }
 
@@ -160,19 +221,21 @@ function renderBill() {
     <tr>
       <td>
         <div class="item-name">${item.name}</div>
-        <div class="item-cat">${item.category}</div>
+        <div class="item-cat">${item.category}${item.is_service ? ` · ₹${item.price}/kg` : ''}</div>
       </td>
-      <td class="item-price">₹${item.price}</td>
+      <td class="item-price">${item.is_service ? `${item.qty} kg` : `₹${item.price}`}</td>
       <td>
         <div class="qty-ctrl">
-          <button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button>
+          ${item.is_service
+            ? `<button class="qty-btn" onclick="removeItem('${item.id}')" title="Remove service" style="padding:0 8px;font-size:11px">✕</button>`
+            : `<button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
           <span class="qty-num">${item.qty}</span>
-          <button class="qty-btn" onclick="changeQty(${item.id},1)">+</button>
+          <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>`}
         </div>
       </td>
       <td class="item-total">₹${(item.price * item.qty).toFixed(2)}</td>
       <td>
-        <button class="del-btn" onclick="removeItem(${item.id})" title="Remove">
+        <button class="del-btn" onclick="removeItem('${item.id}')" title="Remove">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
       </td>
@@ -181,14 +244,32 @@ function renderBill() {
 }
 
 function recalc() {
-  const sub      = billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const gst      = parseFloat(document.getElementById('gstRate').value) || 0;
-  const discEl   = document.getElementById('discount');
-  let discPct    = parseFloat(discEl?.value) || 0;
+  const sub = billItems.reduce((s, i) => {
+    const qty = parseFloat(i.qty) || 0;
+    const price = parseFloat(i.price) || 0;
+    return s + (price * qty);
+  }, 0);
 
-  // Cap discount % between 0 and 100
-  if (discPct > 100) { discPct = 100; if (discEl) discEl.value = 100; }
-  if (discPct < 0)   { discPct = 0;   if (discEl) discEl.value = 0; }
+  let gst = document.getElementById('gstRate').value;
+
+  if (gst === 'custom') {
+    gst = parseFloat(document.getElementById('customGst')?.value) || 0;
+  } else {
+    gst = parseFloat(gst) || 0;
+  }
+
+  const discEl = document.getElementById('discount');
+  let discPct = parseFloat(discEl?.value) || 0;
+
+  if (discPct > 100) {
+    discPct = 100;
+    if (discEl) discEl.value = 100;
+  }
+
+  if (discPct < 0) {
+    discPct = 0;
+    if (discEl) discEl.value = 0;
+  }
 
   const discAmt = sub * discPct / 100;
   const gstAmt  = sub * gst / 100;
@@ -197,21 +278,26 @@ function recalc() {
   const total   = Math.max(0, sub + gstAmt - discAmt);
 
   document.getElementById('subtotal').textContent   = fmt(sub);
-  document.getElementById('gstLabel').textContent   = gst > 0 ? `GST (${gst}%)` : 'GST (0%)';
+  document.getElementById('gstLabel').textContent   = `GST (${gst}%)`;
   document.getElementById('gstAmt').textContent     = fmt(gstAmt);
-  document.getElementById('discAmt').textContent    = discPct > 0 ? `− ₹${discAmt.toFixed(2)} (${discPct}%)` : '− ₹0.00';
+  document.getElementById('discAmt').textContent    = discPct > 0
+    ? `− ₹${discAmt.toFixed(2)} (${discPct}%)`
+    : '− ₹0.00';
+
   document.getElementById('grandTotal').textContent = fmt(total);
 
-  // CGST / SGST split rows
   const splitRow = document.getElementById('gstSplitRow');
   const sgstRow  = document.getElementById('sgstRow');
+
   if (splitRow && sgstRow) {
     if (gst > 0) {
       splitRow.style.display = '';
       sgstRow.style.display  = '';
-      document.getElementById('cgstLabel').textContent = `  ↳ CGST (${gst/2}%)`;
+
+      document.getElementById('cgstLabel').textContent = `↳ CGST (${gst / 2}%)`;
       document.getElementById('cgstAmt').textContent   = fmt(cgst);
-      document.getElementById('sgstLabel').textContent = `  ↳ SGST (${gst/2}%)`;
+
+      document.getElementById('sgstLabel').textContent = `↳ SGST (${gst / 2}%)`;
       document.getElementById('sgstAmt').textContent   = fmt(sgst);
     } else {
       splitRow.style.display = 'none';
@@ -468,39 +554,69 @@ function closeModal() {
 }
 
 async function confirmPayment() {
-  const btn     = document.getElementById('confirmBtn');
-  const gst     = parseFloat(document.getElementById('gstRate').value) || 0;
+  const btn = document.getElementById('confirmBtn');
+
+  let gst = document.getElementById('gstRate').value;
+
+  if (gst === 'custom') {
+    gst = parseFloat(document.getElementById('customGst')?.value) || 0;
+  } else {
+    gst = parseFloat(gst) || 0;
+  }
+
   const discPct = parseFloat(document.getElementById('discount').value) || 0;
   const mode    = document.getElementById('payMode').value;
-  const sub     = billItems.reduce((s, i) => s + i.price * i.qty, 0);
+
+  const sub = billItems.reduce((s, i) => {
+    const qty = parseFloat(i.qty) || 0;
+    const price = parseFloat(i.price) || 0;
+    return s + (price * qty);
+  }, 0);
+
   const gstAmt  = sub * gst / 100;
   const discAmt = sub * discPct / 100;
   const total   = Math.max(0, sub + gstAmt - discAmt);
 
-  btn.textContent = 'Saving...'; btn.disabled = true;
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
   try {
     await Bills.create({
-      customer:     document.getElementById('custName').value || 'Walk-in Customer',
-      mobile:       document.getElementById('custMobile').value || '',
+      customer: document.getElementById('custName').value || 'Walk-in Customer',
+      mobile: document.getElementById('custMobile').value || '',
       payment_mode: mode,
-      gst_rate:     gst,
-      subtotal:     sub,
-      gst_amount:   gstAmt,
-      cgst_amount:  gstAmt / 2,
-      sgst_amount:  gstAmt / 2,
-      discount:     discAmt,
-      total:        total,
-      items: billItems.map(i => ({ product_id: i.id, name: i.name, price: i.price, qty: i.qty, total: i.price * i.qty }))
+      gst_rate: gst,
+      subtotal: sub,
+      gst_amount: gstAmt,
+      cgst_amount: gstAmt / 2,
+      sgst_amount: gstAmt / 2,
+      discount: discAmt,
+      total,
+      items: billItems.map(i => ({
+        product_id: i.id,
+        name: i.name,
+        price: i.price,
+        qty: i.qty,
+        total: i.price * i.qty
+      }))
     });
+
     allProducts = await Products.getAll();
+
+    populateQuickSelect();
+    renderProducts(allProducts);
+
     currentBillNo++;
+
     closeModal();
     resetBill();
+
     showToast('✓ Payment confirmed! Bill saved.');
-  } catch(e) {
+  } catch (e) {
     showToast('Error saving bill: ' + e.message);
   } finally {
-    btn.textContent = '✓ Confirm & Save'; btn.disabled = false;
+    btn.textContent = '✓ Confirm & Save';
+    btn.disabled = false;
   }
 }
 
@@ -535,6 +651,31 @@ function resetBill() {
   document.getElementById('billNo').textContent = `Bill #${String(currentBillNo).padStart(3,'0')}`;
   renderBill();
   renderProducts(allProducts);
+}
+
+
+// ── Idly Maavu Grinding Panel ─────────────────────────────────────────────────
+function initGrindingPanel() {
+  const panel = document.getElementById('grindingPanel');
+  if (!panel) return;
+  // Populate saved rate
+  document.getElementById('grindRatePer').value = getGrindingRate();
+}
+
+function saveGrindingRate() {
+  const r = parseFloat(document.getElementById('grindRatePer').value);
+  if (!r || r <= 0) { showToast('Enter valid rate per kg'); return; }
+  setGrindingRate(r);
+  showToast(`✓ Grinding rate saved: ₹${r}/kg`);
+}
+
+function addGrindingToBill() {
+  const weightEl = document.getElementById('grindWeightKg');
+  const weight   = parseFloat(weightEl?.value);
+  if (!weight || weight <= 0) { showToast('Enter valid weight in kg'); weightEl?.focus(); return; }
+  addGrindingService('idly_maavu', weight);
+  if (weightEl) weightEl.value = '';
+  showToast(`✓ Idly Maavu Grinding ${weight} kg added`);
 }
 
 document.addEventListener('DOMContentLoaded', init);

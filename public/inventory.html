@@ -79,6 +79,21 @@
       <option value="out">Out of Stock</option>
       <option value="ok">In Stock</option>
     </select>
+    <select id="sortFilter" class="select-sm" onchange="filterInv()" style="min-width:155px">
+      <option value="">⇅ Sort: Default</option>
+      <optgroup label="By Code">
+        <option value="code_asc">Code: Low → High</option>
+        <option value="code_desc">Code: High → Low</option>
+      </optgroup>
+      <optgroup label="By Stock">
+        <option value="stock_asc">Stock: Low → High</option>
+        <option value="stock_desc">Stock: High → Low</option>
+      </optgroup>
+      <optgroup label="By Rate">
+        <option value="price_asc">Rate: Low → High</option>
+        <option value="price_desc">Rate: High → Low</option>
+      </optgroup>
+    </select>
   </div>
 
   <div class="inv-table-wrap">
@@ -129,6 +144,7 @@
 <option>Flour Items</option>
 <option>Noodles & Semiya</option>
 <option>Skin Care & Hair Care</option>
+<option>Other Items</option>
             
             
             

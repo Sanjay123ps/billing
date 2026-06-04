@@ -618,6 +618,8 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .mpos-product:active { background: var(--green-50); border-color: var(--green-400); transform: scale(0.98); }
+.mpos-product-oos { opacity: 0.5; cursor: not-allowed !important; background: var(--cream-dark) !important; }
+.mpos-product-oos:active { transform: none !important; background: var(--cream-dark) !important; border-color: var(--border) !important; }
 .mpos-prod-left { flex: 1; min-width: 0; }
 .mpos-prod-name { font-size: 13px; font-weight: 500; color: var(--text-dark); line-height: 1.3; }
 .mpos-prod-cat { font-size: 11px; color: var(--text-muted); margin-top: 2px; }

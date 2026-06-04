@@ -222,6 +222,24 @@ f<!DOCTYPE html>
           </div>
           <span id="codePreview" style="font-size:12px;color:#2d7a4f;font-style:italic;min-width:120px"></span>
         </div>
+        <!-- Idly Maavu Grinding Panel -->
+<div id="grindingPanel" style="border:1px solid #c0dd97;border-radius:10px;padding:12px 14px;background:#f6fdf0;margin-bottom:12px">
+  <div style="font-weight:700;color:#1a5c35;font-size:13px;margin-bottom:8px">🌾 Idly Maavu Grinding</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+    <label style="font-size:12px;color:#555;white-space:nowrap">Rate ₹/kg</label>
+    <input id="grindRatePer" type="number" min="1" step="0.5" value="10"
+      style="width:80px;padding:5px 8px;border:1px solid #c0dd97;border-radius:6px;font-size:13px"/>
+    <button onclick="saveGrindingRate()"
+      style="padding:5px 12px;background:#2d7a4f;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">Save Rate</button>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <label style="font-size:12px;color:#555;white-space:nowrap">Weight (kg)</label>
+    <input id="grindWeightKg" type="number" min="0.5" step="0.5" placeholder="e.g. 2.5"
+      style="width:100px;padding:5px 8px;border:1px solid #c0dd97;border-radius:6px;font-size:13px"/>
+    <button onclick="addGrindingToBill()"
+      style="padding:5px 14px;background:#1a5c35;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer">+ Add to Bill</button>
+  </div>
+</div>
 
         <div class="customer-fields">
           <div class="field-group">
@@ -390,6 +408,85 @@ f<!DOCTYPE html>
 </nav>
 <script src="api.js"></script>
 <script src="billing.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  const raw = sessionStorage.getItem('editing_bill');
+
+  if (!raw) return;
+
+  const bill = JSON.parse(raw);
+
+  if (!bill || !bill.items) return;
+
+  document.getElementById('custName').value = bill.customer || '';
+  document.getElementById('custMobile').value = bill.mobile || '';
+  document.getElementById('payMode').value = bill.payment_mode || 'Cash';
+
+  if (bill.gst_rate && ![0,5,12,18].includes(Number(bill.gst_rate))) {
+    document.getElementById('gstRate').value = 'custom';
+    document.getElementById('customGst').style.display = 'block';
+    document.getElementById('customGst').value = bill.gst_rate;
+  } else {
+    document.getElementById('gstRate').value = String(bill.gst_rate || 0);
+  }
+
+  billItems = bill.items.map(i => ({
+    id: i.product_id || i.id,
+    name: i.name,
+    category: i.category || 'General',
+    price: parseFloat(i.price),
+    qty: parseFloat(i.qty),
+    stock: 9999,
+    unit: i.unit || 'pcs'
+  }));
+
+  renderBill();
+
+  sessionStorage.removeItem('editing_bill');
+  // editing_bill_id / editing_bill_no intentionally kept — used by confirmPayment override below
+});
+</script>
+<script>
+/* ── EDIT MODE: override confirmPayment to delete-old then re-create ── */
+const _editingBillId = sessionStorage.getItem('editing_bill_id');
+const _editingBillNo = sessionStorage.getItem('editing_bill_no');
+
+if (_editingBillId) {
+  // Show edit banner
+  document.addEventListener('DOMContentLoaded', () => {
+    const banner = document.createElement('div');
+    banner.id = 'editBanner';
+    banner.style.cssText = 'background:#fff3cd;border:1.5px solid #ffc107;color:#856404;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:10px;text-align:center';
+    banner.textContent = `✏️ Editing Bill #${String(_editingBillNo).padStart(3,'0')} — confirm to save changes`;
+    const billCard = document.querySelector('.bill-card');
+    if (billCard) billCard.insertAdjacentElement('afterbegin', banner);
+  });
+
+  const _baseConfirmPayment = confirmPayment;
+  confirmPayment = async function () {
+    const btn = document.getElementById('confirmBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+    try {
+      // 1. Delete the original bill
+      await Bills.delete(parseInt(_editingBillId));
+    } catch(e) {
+      // If delete fails the old bill still exists — abort to avoid duplicates
+      showToast('Error replacing bill: ' + e.message);
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Confirm & Save'; }
+      return;
+    }
+    // 2. Restore bill_no counter so new bill gets the same number
+    currentBillNo = parseInt(_editingBillNo);
+    // 3. Clear edit keys before creating
+    sessionStorage.removeItem('editing_bill_id');
+    sessionStorage.removeItem('editing_bill_no');
+    sessionStorage.removeItem('editing_bill_deleted');
+    if (btn) { btn.disabled = false; }
+    // 4. Call original confirmPayment — it will create with currentBillNo
+    return _baseConfirmPayment();
+  };
+}
+</script>
 <script>
 /* ── CUSTOM GST: show/hide input field ─────── */
 function handleGstChange() {
