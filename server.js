@@ -36,7 +36,8 @@ app.use('/api/reports',  reportRoutes);
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // Fallback to frontend for all other routes
-app.get('/{*path}', (req, res) => {
+// Fallback to frontend for all other routes cleanly
+app.get('*', (req, res) => {
   res.sendFile(path.join(APP_ROOT, 'public', 'index.html'));
 });
 

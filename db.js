@@ -1,31 +1,59 @@
-const initSqlJs = require('sql.js');
-const fs        = require('fs');
-const path      = require('path');
-const bcrypt    = require('bcryptjs');
+const path    = require('path');
+const fs      = require('fs');
+const bcrypt  = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, 'ayini.db');
+// APP_ROOT set by main.js env; fallback to __dirname for dev
+const APP_ROOT = process.env.APP_ROOT || __dirname;
+
+// FIX: If AYINI_DATA_PATH is provided, use it. Otherwise, fall back gracefully.
+const DB_PATH = process.env.AYINI_DATA_PATH
+  ? path.join(process.env.AYINI_DATA_PATH, 'ayini.db')
+  : path.join(APP_ROOT, 'ayini.db');
 
 let db;
 
+// ── sql.js with WASM path fix for packaged Electron ──────────────────────────
+async function getSqlJs() {
+  // FIX: Use a clean, static literal string string for require so the bundler resolves it correctly
+  const initSqlJs = require('sql.js');
+  
+  const wasmPath  = process.env.SQLJS_WASM_PATH
+    || path.join(APP_ROOT, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+
+  return initSqlJs({
+    locateFile: () => wasmPath,
+  });
+}
+
 // Persist DB to disk
 function saveDB() {
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
+  try {
+    const data = db.export();
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  } catch (err) {
+    console.error('Failed to write database file:', err);
+  }
 }
 
 // Auto-save every 30 seconds
 setInterval(() => { if (db) saveDB(); }, 30000);
 
 async function initDB() {
-  const SQL = await initSqlJs();
+  // FIX: Explicitly check and recursively build directories for your DB write destination 
+  const dbDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  const SQL = await getSqlJs();
 
   if (fs.existsSync(DB_PATH)) {
     const fileBuffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(fileBuffer);
-    console.log('✓ Loaded existing database');
+    console.log('✓ Loaded existing database from', DB_PATH);
   } else {
     db = new SQL.Database();
-    console.log('✓ Created new database');
+    console.log('✓ Created new database at', DB_PATH);
   }
 
   // Create tables
@@ -91,8 +119,7 @@ async function initDB() {
     )
   `);
 
-  // ── MIGRATIONS — safe to run on every startup ──────────────────────────────
-  // ALTER TABLE is ignored if column already exists (caught silently)
+  // ── MIGRATIONS ─────────────────────────────────────────────────────────────
   const migrations = [
     "ALTER TABLE products ADD COLUMN code INTEGER UNIQUE",
     "ALTER TABLE bills ADD COLUMN cgst_amount REAL DEFAULT 0",
@@ -101,9 +128,10 @@ async function initDB() {
   migrations.forEach(sql => {
     try { db.run(sql); } catch(e) { /* column already exists — skip */ }
   });
-  // Unique index on product codes (safe to re-run with IF NOT EXISTS)
+
+  // Repair: ensure admin user always has role='admin' (fixes corrupted/null role)
+  db.run("UPDATE users SET role='admin' WHERE username='admin' AND (role IS NULL OR role != 'admin')");
   db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_code ON products(code) WHERE code IS NOT NULL");
-  // ───────────────────────────────────────────────────────────────────────────
 
   // Seed admin user if not exists
   const adminExists = db.exec("SELECT id FROM users WHERE username='admin'");
@@ -122,9 +150,7 @@ async function initDB() {
   // Seed products if none exist
   const prodCheck = db.exec("SELECT COUNT(*) as c FROM products");
   const prodCount = prodCheck[0].values[0][0];
-  if (prodCount === 0) {
-    seedProducts();
-  }
+  if (prodCount === 0) seedProducts();
 
   saveDB();
   return db;
@@ -132,7 +158,6 @@ async function initDB() {
 
 function seedProducts() {
   const products = [
-    // [code, name, category, price, stock, unit]
     [1,  "Mutton Masala / Kuruma Masala (250g)", "Masala Items",             135, 20, "pack"],
     [2,  "Paruppu Podi (100g)",                  "Masala Items",             60,  25, "pack"],
     [3,  "Chilli Powder (100g)",                 "Masala Items",             50,  30, "pack"],
@@ -196,26 +221,50 @@ function seedProducts() {
     [61, "Bathing Soap",                         "Skin Care & Hair Care",    70,  20, "bar"],
     [62, "Sandal Soap",                          "Skin Care & Hair Care",    70,  20, "bar"],
     [63, "Arisi Maavu Soap",                     "Skin Care & Hair Care",    70,  20, "bar"],
+    [64, "Curd",                                  "Other Items",             10,  20, "Pack"],
+    [65, "Milk",                                  "Other Items",             10,  20, "Pack"],
+    [66, "Kiwi",                                  "Other Items",             65,  20, "Pack"],
+    [67, "Honey Amla",                            "Other Items",             65,  20, "Pack"],
+    [68, "Mixed Nuts",                            "Other Items",            150,  20, "Pack"],
+    [69, "Mixed Seeds",                           "Other Items",            100,  20, "Pack"],
+    [70, "Sabja Seeds",                           "Other Items",            25,  20, "Pack"],
+    [71, "Chia Seeds",                            "Other Items",            25,  20, "Pack"],
+    [72, "Cashew Nuts",                           "Other Items",            60,  20, "Pack"],
+    [73, "Grapes",                                "Other Items",            35,  20, "Pack"],
+    [74, "Pista",                                 "Other Items",            85,  20, "Pack"],
+    [75, "Badam",                                 "Other Items",            60,  20, "Pack"],
+    [76, "Dates",                                 "Other Items",            50,  20, "Pack"],
+    [77, "Idly Maavu ",                           "Other Items",            30,  20, "Pack"],
   ];
 
   const stmt = db.prepare("INSERT INTO products (code, name, category, price, stock, unit) VALUES (?, ?, ?, ?, ?, ?)");
   products.forEach(p => stmt.run(p));
   stmt.free();
-  console.log(`✓ Seeded ${products.length} products with codes 1–${products.length}`);
+  console.log(`✓ Seeded ${products.length} products`);
 }
 
 // ===== DB HELPER FUNCTIONS =====
 
 function query(sql, params = []) {
   try {
-    const result = db.exec(sql, params);
-    if (!result[0]) return [];
-    const { columns, values } = result[0];
-    return values.map(row => {
-      const obj = {};
-      columns.forEach((col, i) => obj[col] = row[i]);
-      return obj;
-    });
+    if (params.length === 0) {
+      const result = db.exec(sql);
+      if (!result[0]) return [];
+      const { columns, values } = result[0];
+      return values.map(row => {
+        const obj = {};
+        columns.forEach((col, i) => obj[col] = row[i]);
+        return obj;
+      });
+    }
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
   } catch (e) {
     console.error('DB query error:', e.message, sql);
     return [];
