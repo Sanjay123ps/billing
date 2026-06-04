@@ -1,3 +1,20 @@
+// ===== ADD THESE LINES TO server.js AFTER EXISTING ROUTE IMPORTS =====
+
+// AFTER: const reportRoutes  = require(path.join(APP_ROOT, 'routes', 'reports'));
+
+const purchaseRoutes = require(path.join(APP_ROOT, 'routes', 'purchases'));
+const settingsRoutes = require(path.join(APP_ROOT, 'routes', 'settings'));
+
+// ===== THEN ADD THESE LINES IN THE API ROUTES SECTION =====
+
+// AFTER: app.use('/api/reports',  reportRoutes);
+
+app.use('/api/purchases', purchaseRoutes);
+app.use('/api/settings',  settingsRoutes);
+
+// ===== COMPLETE server.js SHOULD LOOK LIKE THIS: =====
+
+/*
 const express  = require('express');
 const cors     = require('cors');
 const path     = require('path');
@@ -12,6 +29,8 @@ const authRoutes    = require(path.join(APP_ROOT, 'routes', 'auth'));
 const productRoutes = require(path.join(APP_ROOT, 'routes', 'products'));
 const billRoutes    = require(path.join(APP_ROOT, 'routes', 'bills'));
 const reportRoutes  = require(path.join(APP_ROOT, 'routes', 'reports'));
+const purchaseRoutes = require(path.join(APP_ROOT, 'routes', 'purchases'));
+const settingsRoutes = require(path.join(APP_ROOT, 'routes', 'settings'));
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -31,12 +50,13 @@ app.use('/api/auth',     authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/bills',    billRoutes);
 app.use('/api/reports',  reportRoutes);
+app.use('/api/purchases', purchaseRoutes);
+app.use('/api/settings',  settingsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // Fallback to frontend for all other routes
-// Fallback to frontend for all other routes cleanly
 app.get('*', (req, res) => {
   res.sendFile(path.join(APP_ROOT, 'public', 'index.html'));
 });
@@ -50,3 +70,4 @@ initDB().then(() => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });
+*/

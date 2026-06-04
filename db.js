@@ -119,11 +119,49 @@ async function initDB() {
     )
   `);
 
+  // ===== NEW: Create purchases table =====
+  db.run(`
+    CREATE TABLE IF NOT EXISTS purchases (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_name    TEXT NOT NULL,
+      total_amount REAL DEFAULT 0,
+      item_count   INTEGER DEFAULT 0,
+      created_at   TEXT DEFAULT (datetime('now','localtime')),
+      updated_at   TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // ===== NEW: Create purchase_items table (for detailed item tracking) =====
+  db.run(`
+    CREATE TABLE IF NOT EXISTS purchase_items (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      purchase_id INTEGER NOT NULL,
+      item_name   TEXT NOT NULL,
+      amount      REAL NOT NULL,
+      FOREIGN KEY(purchase_id) REFERENCES purchases(id) ON DELETE CASCADE
+    )
+  `);
+
+  // ===== NEW: Create settings table =====
+  db.run(`
+    CREATE TABLE IF NOT EXISTS settings (
+      id              INTEGER PRIMARY KEY,
+      shop_name       TEXT DEFAULT 'Ayini Home Products',
+      gstin_number    TEXT DEFAULT '',
+      gst_rate        REAL DEFAULT 0,
+      theme_mode      TEXT DEFAULT 'dark',
+      product_view    TEXT DEFAULT 'grid',
+      updated_at      TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
   // ── MIGRATIONS ─────────────────────────────────────────────────────────────
   const migrations = [
     "ALTER TABLE products ADD COLUMN code INTEGER UNIQUE",
     "ALTER TABLE bills ADD COLUMN cgst_amount REAL DEFAULT 0",
     "ALTER TABLE bills ADD COLUMN sgst_amount REAL DEFAULT 0",
+    "ALTER TABLE purchases ADD COLUMN item_count INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN product_view TEXT DEFAULT 'grid'",
   ];
   migrations.forEach(sql => {
     try { db.run(sql); } catch(e) { /* column already exists — skip */ }
@@ -145,6 +183,14 @@ async function initDB() {
   const ctr = db.exec("SELECT count FROM bill_counter WHERE id=1");
   if (!ctr[0]) {
     db.run("INSERT INTO bill_counter (id, count) VALUES (1, 1)");
+  }
+
+  // ===== NEW: Initialize default settings if none exist =====
+  const settingsCheck = db.exec("SELECT id FROM settings WHERE id=1");
+  if (!settingsCheck[0]) {
+    db.run("INSERT INTO settings (id, shop_name, gstin_number, gst_rate, theme_mode, product_view) VALUES (1, ?, ?, ?, ?, ?)", 
+      ['Ayini Home Products', '', 0, 'dark', 'grid']);
+    console.log('✓ Default settings initialized');
   }
 
   // Seed products if none exist

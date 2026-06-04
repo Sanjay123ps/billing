@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Purchases — Ayini Billing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* Fix input colors */
+    input[type="text"], input[type="number"], select {
+      color: #1c1a16 !important;
+      -webkit-text-fill-color: #1c1a16 !important;
+      background-color: #ffffff !important;
+    }
+    input::placeholder { color: #a09a8e !important; }
+
+    /* Page layout */
+    .purchases-container {
+      max-width: 1200px; margin: 0 auto; padding: 2rem;
+    }
+
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px; font-weight: 700; color: var(--text-dark);
+    }
+
+    .btn-new-purchase {
+      background: var(--green-700);
+      color: #fff; padding: 12px 24px; border: none;
+      border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+
+    .btn-new-purchase:hover {
+      background: var(--green-800);
+    }
+
+    /* Filter buttons */
+    .filters {
+      display: flex; gap: 12px; margin-bottom: 2rem; flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 8px 16px; background: var(--cream-dark);
+      border: 1.5px solid var(--border); border-radius: 20px;
+      font-size: 13px; font-weight: 500; color: var(--text-mid);
+      cursor: pointer; transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      background: var(--green-50); border-color: var(--green-200);
+    }
+
+    .filter-btn.active {
+      background: var(--green-700); color: #fff; border-color: var(--green-800);
+    }
+
+    /* Table styles */
+    .purchases-table {
+      width: 100%; border-collapse: collapse;
+      background: #fff; border-radius: 10px;
+      overflow: hidden; box-shadow: var(--shadow-md);
+    }
+
+    .purchases-table thead {
+      background: linear-gradient(135deg, var(--green-800), var(--green-700));
+      color: #fff;
+    }
+
+    .purchases-table th {
+      padding: 16px; text-align: left; font-size: 13px;
+      font-weight: 600; letter-spacing: 0.02em;
+    }
+
+    .purchases-table td {
+      padding: 14px 16px; border-bottom: 1px solid var(--border-light);
+      font-size: 13px; color: var(--text-dark);
+    }
+
+    .purchases-table tbody tr:hover {
+      background: var(--green-50);
+    }
+
+    .purchases-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .purchase-date {
+      color: var(--text-mid); font-size: 12px;
+    }
+
+    .purchase-amount {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700; color: var(--green-700);
+    }
+
+    .empty-state {
+      text-align: center; padding: 4rem 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-icon {
+      font-size: 48px; margin-bottom: 1rem;
+    }
+
+    .empty-text {
+      font-size: 16px; font-weight: 600; margin-bottom: 0.5rem;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(20,18,14,0.65);
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal-box {
+      background: #fff; border-radius: 16px;
+      width: 100%; max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, var(--green-800), var(--green-700));
+      padding: 20px; display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 700; color: #fff;
+    }
+
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255,255,255,0.15); border: none;
+      color: #fff; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .modal-close:hover { background: rgba(255,255,255,0.25); }
+
+    .modal-body {
+      padding: 24px; max-height: 70vh; overflow-y: auto;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-mid); margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; color: #1c1a16;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none; border-color: var(--green-700);
+      box-shadow: 0 0 0 3px rgba(59,109,17,0.12);
+    }
+
+    /* Items section */
+    .items-section {
+      margin: 24px 0; padding: 16px;
+      background: var(--green-50); border-radius: 8px;
+      border: 1.5px solid var(--green-200);
+    }
+
+    .items-section-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--green-800); margin-bottom: 12px;
+    }
+
+    .item-row {
+      display: grid; grid-template-columns: 1fr 80px 40px;
+      gap: 8px; margin-bottom: 8px; align-items: flex-end;
+    }
+
+    .item-row input {
+      padding: 8px;
+    }
+
+    .btn-remove-item {
+      background: var(--red-600); color: #fff;
+      border: none; padding: 6px 8px; border-radius: 4px;
+      font-size: 12px; cursor: pointer; transition: background 0.2s;
+    }
+
+    .btn-remove-item:hover {
+      background: #8a1f1f;
+    }
+
+    .btn-add-item {
+      background: var(--green-600); color: #fff;
+      border: none; padding: 8px 12px; border-radius: 4px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s; width: 100%;
+    }
+
+    .btn-add-item:hover {
+      background: var(--green-700);
+    }
+
+    /* Total summary */
+    .purchase-total {
+      background: linear-gradient(135deg, var(--green-50), var(--amber-50));
+      padding: 14px; border-radius: 8px; border: 1.5px solid var(--green-200);
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 20px 0;
+    }
+
+    .total-label {
+      font-size: 12px; font-weight: 700; color: var(--text-mid);
+      text-transform: uppercase; letter-spacing: 0.02em;
+    }
+
+    .total-amount {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px; font-weight: 700; color: var(--green-800);
+    }
+
+    /* Modal footer */
+    .modal-footer {
+      padding: 16px 24px; background: var(--cream-dark);
+      display: flex; gap: 12px; justify-content: flex-end;
+    }
+
+    .btn-cancel {
+      padding: 10px 16px; background: var(--border);
+      border: none; border-radius: 6px; font-size: 13px;
+      font-weight: 600; cursor: pointer; color: var(--text-dark);
+      transition: background 0.2s;
+    }
+
+    .btn-cancel:hover {
+      background: var(--border-light);
+    }
+
+    .btn-save {
+      padding: 10px 20px; background: var(--green-700);
+      color: #fff; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-save:hover {
+      background: var(--green-800);
+    }
+
+    .btn-save:disabled {
+      opacity: 0.6; cursor: not-allowed;
+    }
+
+    /* Alert messages */
+    .alert {
+      padding: 12px 16px; border-radius: 8px; margin-bottom: 1rem;
+      font-size: 13px; display: none;
+    }
+
+    .alert.success {
+      background: var(--green-50); color: var(--green-800);
+      border: 1.5px solid var(--green-200); display: block;
+    }
+
+    .alert.error {
+      background: var(--red-100); color: var(--red-600);
+      border: 1.5px solid rgba(163,45,45,0.3); display: block;
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-leaf">🌿</span>
+      <span class="brand-text">Ayini <span>Home Products</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Billing</a>
+      <a href="saved-bills.html" class="nav-link">Saved Bills</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="reports.html" class="nav-link">Reports</a>
+      <a href="closing-summary.html" class="nav-link">Closing</a>
+      <a href="credit-bills.html" class="nav-link">Credits</a>
+      <a href="purchases.html" class="nav-link active">Purchases</a>
+      <a href="settings.html" class="nav-link">Settings</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <span class="nav-date" id="navDate"></span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.6)" id="navUser"></span>
+      <a href="change-password.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;text-decoration:none">🔑 Password</a>
+      <button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<main class="purchases-container">
+  <div class="page-header">
+    <h1 class="page-title">Purchases</h1>
+    <button class="btn-new-purchase" onclick="openPurchaseModal()">+ New Purchase</button>
+  </div>
+
+  <div id="alertBox" class="alert"></div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="applyFilter('all')">All</button>
+    <button class="filter-btn" onclick="applyFilter('today')">Today</button>
+    <button class="filter-btn" onclick="applyFilter('month')">This Month</button>
+    <button class="filter-btn" onclick="applyFilter('six-months')">Last 6 Months</button>
+    <button class="filter-btn" onclick="applyFilter('year')">This Year</button>
+  </div>
+
+  <table class="purchases-table" id="purchasesTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Shop Name</th>
+        <th>Items</th>
+        <th>Total Amount</th>
+        <th style="text-align: center;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="purchasesBody">
+      <tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">Loading purchases...</td></tr>
+    </tbody>
+  </table>
+</main>
+
+<!-- Purchase Modal -->
+<div class="modal-overlay" id="purchaseModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title">New Purchase</h2>
+      <button class="modal-close" onclick="closePurchaseModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Shop Name</label>
+        <input type="text" id="shopName" class="form-input" placeholder="Enter supplier/shop name" />
+      </div>
+
+      <div class="items-section">
+        <div class="items-section-title">Items Purchased</div>
+        <div id="itemsContainer"></div>
+        <button class="btn-add-item" onclick="addItemRow()">+ Add Item</button>
+      </div>
+
+      <div class="purchase-total">
+        <span class="total-label">Total Purchase Amount</span>
+        <span class="total-amount" id="totalAmount">₹0</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closePurchaseModal()">Cancel</button>
+      <button class="btn-save" onclick="savePurchase()">Save Purchase</button>
+    </div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  let currentFilter = 'all';
+  let items = [];
+
+  // Initialize
+  window.addEventListener('load', () => {
+    loadUserInfo();
+    loadPurchases();
+    addItemRow(); // Add first empty row
+  });
+
+  // Load user info
+  function loadUserInfo() {
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) document.getElementById('navUser').textContent = data.user.username;
+      })
+      .catch(() => {});
+
+    document.getElementById('navDate').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // Load purchases
+  function loadPurchases() {
+    const url = currentFilter === 'all' 
+      ? '/api/purchases' 
+      : `/api/purchases?filter=${currentFilter}`;
+
+    API.get(url, (data) => {
+      if (data.success && data.purchases) {
+        renderPurchases(data.purchases);
+      }
+    }, (err) => {
+      showAlert('Error loading purchases: ' + err, 'error');
+      renderEmpty();
+    });
+  }
+
+  // Render purchases table
+  function renderPurchases(purchases) {
+    const tbody = document.getElementById('purchasesBody');
+    
+    if (purchases.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+            <div class="empty-icon">📦</div>
+            <div class="empty-text">No purchases found</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Create your first purchase to get started</div>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = purchases.map(p => {
+      const date = new Date(p.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      const time = new Date(p.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      
+      return `
+        <tr>
+          <td>
+            <div style="font-weight: 600;">${date}</div>
+            <div class="purchase-date">${time}</div>
+          </td>
+          <td>${p.shop_name}</td>
+          <td><span style="background: var(--green-50); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; color: var(--green-800);">${p.item_count} items</span></td>
+          <td><span class="purchase-amount">₹${parseFloat(p.total_amount).toFixed(2)}</span></td>
+          <td style="text-align: center;">
+            <button onclick="deletePurchase(${p.id})" style="background: none; border: none; color: var(--red-600); cursor: pointer; font-size: 14px; padding: 4px 8px;">🗑️ Delete</button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // Render empty state
+  function renderEmpty() {
+    const tbody = document.getElementById('purchasesBody');
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="padding: 3rem; text-align: center;">
+          <div style="color: var(--text-muted);">Unable to load purchases. Please try again.</div>
+        </td>
+      </tr>`;
+  }
+
+  // Apply filter
+  function applyFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    loadPurchases();
+  }
+
+  // Open modal
+  function openPurchaseModal() {
+    items = [{ name: '', amount: 0 }];
+    renderItemRows();
+    document.getElementById('shopName').value = '';
+    document.getElementById('purchaseModal').classList.add('open');
+  }
+
+  // Close modal
+  function closePurchaseModal() {
+    document.getElementById('purchaseModal').classList.remove('open');
+  }
+
+  // Add item row
+  function addItemRow() {
+    items.push({ name: '', amount: 0 });
+    renderItemRows();
+  }
+
+  // Remove item row
+  function removeItemRow(idx) {
+    items.splice(idx, 1);
+    if (items.length === 0) items.push({ name: '', amount: 0 });
+    renderItemRows();
+  }
+
+  // Render item rows
+  function renderItemRows() {
+    const container = document.getElementById('itemsContainer');
+    container.innerHTML = items.map((item, idx) => `
+      <div class="item-row">
+        <input type="text" placeholder="Item name (e.g. White Eggs)" 
+          value="${item.name}" 
+          onchange="items[${idx}].name = this.value" 
+          class="form-input" />
+        <input type="number" placeholder="₹0" min="0" step="0.01"
+          value="${item.amount}" 
+          onchange="items[${idx}].amount = parseFloat(this.value || 0); updateTotal();" 
+          class="form-input" />
+        <button class="btn-remove-item" onclick="removeItemRow(${idx})">Remove</button>
+      </div>`).join('');
+    updateTotal();
+  }
+
+  // Update total
+  function updateTotal() {
+    const total = items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    document.getElementById('totalAmount').textContent = '₹' + total.toFixed(2);
+  }
+
+  // Save purchase
+  function savePurchase() {
+    const shopName = document.getElementById('shopName').value.trim();
+    
+    if (!shopName) {
+      showAlert('Please enter a shop name', 'error');
+      return;
+    }
+
+    const validItems = items.filter(item => item.name && item.amount > 0);
+    if (validItems.length === 0) {
+      showAlert('Please add at least one item with amount', 'error');
+      return;
+    }
+
+    const payload = {
+      shopName: shopName,
+      items: validItems
+    };
+
+    API.post('/api/purchases', payload, (data) => {
+      if (data.success) {
+        showAlert('Purchase saved successfully!', 'success');
+        closePurchaseModal();
+        loadPurchases();
+      }
+    }, (err) => {
+      showAlert('Error saving purchase: ' + err, 'error');
+    });
+  }
+
+  // Delete purchase
+  function deletePurchase(id) {
+    if (!confirm('Are you sure you want to delete this purchase?')) return;
+
+    API.delete(`/api/purchases/${id}`, (data) => {
+      if (data.success) {
+        showAlert('Purchase deleted', 'success');
+        loadPurchases();
+      }
+    }, (err) => {
+      showAlert('Error deleting purchase: ' + err, 'error');
+    });
+  }
+
+  // Show alert
+  function showAlert(msg, type) {
+    const alert = document.getElementById('alertBox');
+    alert.textContent = msg;
+    alert.className = `alert ${type}`;
+    setTimeout(() => alert.className = 'alert', 5000);
+  }
+
+  // Close modal on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePurchaseModal();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Settings — Ayini Billing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* Fix input colors */
+    input[type="text"], input[type="number"], input[type="range"], select {
+      color: #1c1a16 !important;
+      -webkit-text-fill-color: #1c1a16 !important;
+      background-color: #ffffff !important;
+    }
+    input::placeholder { color: #a09a8e !important; }
+
+    /* Page layout */
+    .settings-container {
+      max-width: 900px; margin: 0 auto; padding: 2rem;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px; font-weight: 700; color: var(--text-dark);
+      margin-bottom: 0.5rem;
+    }
+
+    .page-subtitle {
+      font-size: 13px; color: var(--text-muted);
+    }
+
+    /* Settings sections */
+    .settings-section {
+      background: #fff; border-radius: 12px;
+      padding: 24px; margin-bottom: 20px;
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px; font-weight: 700;
+      color: var(--green-800); margin-bottom: 16px;
+      padding-bottom: 12px; border-bottom: 2px solid var(--green-50);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-mid); margin-bottom: 8px;
+    }
+
+    .form-input, .form-select {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; color: #1c1a16;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus {
+      outline: none; border-color: var(--green-700);
+      box-shadow: 0 0 0 3px rgba(59,109,17,0.12);
+    }
+
+    /* Two column layout for some sections */
+    .form-row {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Slider styles */
+    .slider-container {
+      margin: 20px 0;
+    }
+
+    .slider-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .slider-label {
+      font-size: 13px; font-weight: 600; color: var(--text-dark);
+    }
+
+    .slider-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 700; color: var(--green-700);
+      background: var(--green-50); padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .slider-input {
+      width: 100%; height: 6px; cursor: pointer;
+      appearance: none; -webkit-appearance: none;
+      border-radius: 3px; background: linear-gradient(90deg, #fff, var(--green-700), #fff);
+      outline: none;
+    }
+
+    .slider-input::-webkit-slider-thumb {
+      appearance: none; -webkit-appearance: none;
+      width: 20px; height: 20px; cursor: pointer;
+      border-radius: 50%; background: var(--green-700);
+      box-shadow: 0 2px 6px rgba(59,109,17,0.3);
+      transition: all 0.2s;
+    }
+
+    .slider-input::-moz-range-thumb {
+      width: 20px; height: 20px; cursor: pointer;
+      border-radius: 50%; background: var(--green-700);
+      border: none; box-shadow: 0 2px 6px rgba(59,109,17,0.3);
+      transition: all 0.2s;
+    }
+
+    .slider-input::-webkit-slider-thumb:hover {
+      box-shadow: 0 4px 12px rgba(59,109,17,0.4);
+      transform: scale(1.15);
+    }
+
+    .slider-input::-moz-range-thumb:hover {
+      box-shadow: 0 4px 12px rgba(59,109,17,0.4);
+      transform: scale(1.15);
+    }
+
+    .slider-range {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Toggle switch */
+    .toggle-group {
+      display: flex; gap: 12px; align-items: center;
+      margin: 20px 0;
+    }
+
+    .toggle-label {
+      font-size: 13px; font-weight: 600; color: var(--text-dark);
+      flex: 1;
+    }
+
+    .toggle-switch {
+      display: flex; gap: 12px;
+    }
+
+    .toggle-btn {
+      padding: 8px 16px; border: 1.5px solid var(--border);
+      background: #fff; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      color: var(--text-mid); cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: var(--green-700); color: #fff; border-color: var(--green-800);
+    }
+
+    .toggle-btn:hover {
+      border-color: var(--green-700);
+    }
+
+    /* Grid vs List view options */
+    .view-options {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin: 16px 0;
+    }
+
+    .view-option {
+      padding: 16px; border: 1.5px solid var(--border);
+      background: #fff; border-radius: 8px;
+      text-align: center; cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-option:hover {
+      border-color: var(--green-700);
+      background: var(--green-50);
+    }
+
+    .view-option.active {
+      background: var(--green-700); border-color: var(--green-800);
+      color: #fff;
+    }
+
+    .view-option-icon {
+      font-size: 28px; margin-bottom: 8px;
+    }
+
+    .view-option-label {
+      font-size: 12px; font-weight: 600;
+    }
+
+    /* Info box */
+    .info-box {
+      background: linear-gradient(135deg, var(--green-50), var(--amber-50));
+      border: 1.5px solid var(--green-200);
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 12px; color: var(--text-dark);
+      margin: 12px 0;
+    }
+
+    .info-box strong {
+      display: block; margin-bottom: 4px; color: var(--green-800);
+    }
+
+    /* Bottom action buttons */
+    .settings-footer {
+      display: flex; gap: 12px; justify-content: flex-end;
+      margin-top: 32px; padding-top: 20px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .btn-reset {
+      padding: 12px 20px; background: var(--border);
+      border: none; border-radius: 6px; font-size: 13px;
+      font-weight: 600; color: var(--text-dark);
+      cursor: pointer; transition: background 0.2s;
+    }
+
+    .btn-reset:hover {
+      background: var(--border-light);
+    }
+
+    .btn-save {
+      padding: 12px 24px; background: var(--green-700);
+      color: #fff; border: none; border-radius: 6px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-save:hover {
+      background: var(--green-800);
+    }
+
+    .btn-save:disabled {
+      opacity: 0.6; cursor: not-allowed;
+    }
+
+    /* Alert messages */
+    .alert {
+      padding: 12px 16px; border-radius: 8px; margin-bottom: 1rem;
+      font-size: 13px; display: none;
+    }
+
+    .alert.success {
+      background: var(--green-50); color: var(--green-800);
+      border: 1.5px solid var(--green-200); display: block;
+    }
+
+    .alert.error {
+      background: var(--red-100); color: var(--red-600);
+      border: 1.5px solid rgba(163,45,45,0.3); display: block;
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-leaf">🌿</span>
+      <span class="brand-text">Ayini <span>Home Products</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Billing</a>
+      <a href="saved-bills.html" class="nav-link">Saved Bills</a>
+      <a href="inventory.html" class="nav-link">Inventory</a>
+      <a href="reports.html" class="nav-link">Reports</a>
+      <a href="closing-summary.html" class="nav-link">Closing</a>
+      <a href="credit-bills.html" class="nav-link">Credits</a>
+      <a href="purchases.html" class="nav-link">Purchases</a>
+      <a href="settings.html" class="nav-link active">Settings</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+      <span class="nav-date" id="navDate"></span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.6)" id="navUser"></span>
+      <a href="change-password.html" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;text-decoration:none">🔑 Password</a>
+      <button onclick="Auth.logout()" style="background:rgba(255,255,255,0.12);border:none;color:rgba(255,255,255,0.7);padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<main class="settings-container">
+  <div class="page-header">
+    <h1 class="page-title">Settings</h1>
+    <p class="page-subtitle">Manage your shop details, tax settings, and preferences</p>
+  </div>
+
+  <div id="alertBox" class="alert"></div>
+
+  <!-- Shop Details -->
+  <div class="settings-section">
+    <h2 class="section-title">Shop Details</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Shop Name</label>
+        <input type="text" id="shopName" class="form-input" placeholder="e.g. Ayini Home Products" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">GSTIN Number</label>
+        <input type="text" id="gstinNumber" class="form-input" placeholder="e.g. 33AABCT1234A1Z5" maxlength="15" />
+      </div>
+    </div>
+    <div class="info-box">
+      <strong>About GSTIN</strong>
+      The Goods and Services Tax Identification Number (GSTIN) uniquely identifies your business for GST registration. Leave empty if not applicable.
+    </div>
+  </div>
+
+  <!-- Tax Settings -->
+  <div class="settings-section">
+    <h2 class="section-title">Tax Settings</h2>
+    <div class="slider-container">
+      <div class="slider-header">
+        <span class="slider-label">GST Rate</span>
+        <span class="slider-value"><span id="gstValue">0</span>%</span>
+      </div>
+      <input type="range" id="gstSlider" class="slider-input" min="0" max="28" value="0" step="0.5" onchange="updateGstDisplay()" oninput="updateGstDisplay()" />
+      <div class="slider-range">
+        <span>0%</span>
+        <span>28%</span>
+      </div>
+    </div>
+    <div class="info-box">
+      <strong>GST Applied to Bills</strong>
+      The GST rate set here will be automatically applied when creating new bills. This affects all transactions until changed.
+    </div>
+  </div>
+
+  <!-- Theme Settings -->
+  <div class="settings-section">
+    <h2 class="section-title">Theme Settings</h2>
+    <div class="toggle-group">
+      <span class="toggle-label">Appearance</span>
+      <div class="toggle-switch">
+        <button class="toggle-btn active" id="themeDarkBtn" onclick="setTheme('dark')">🌙 Dark</button>
+        <button class="toggle-btn" id="themeLightBtn" onclick="setTheme('light')">☀️ Light</button>
+      </div>
+    </div>
+    <div class="info-box">
+      <strong>Note</strong>
+      Theme changes apply immediately to your current session. Refresh the page to see changes across all tabs.
+    </div>
+  </div>
+
+  <!-- Product Display Style -->
+  <div class="settings-section">
+    <h2 class="section-title">Product Display Style</h2>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Choose how products appear on the billing page</p>
+    <div class="view-options">
+      <div class="view-option active" id="gridViewBtn" onclick="setProductView('grid')">
+        <div class="view-option-icon">⚙️</div>
+        <div class="view-option-label">Grid View</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Products as cards</div>
+      </div>
+      <div class="view-option" id="listViewBtn" onclick="setProductView('list')">
+        <div class="view-option-icon">📋</div>
+        <div class="view-option-label">List View</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Products in a table</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer actions -->
+  <div class="settings-footer">
+    <button class="btn-reset" onclick="resetForm()">Reset Changes</button>
+    <button class="btn-save" id="saveBtn" onclick="saveSettings()">Update Settings</button>
+  </div>
+</main>
+
+<script src="api.js"></script>
+<script>
+  let originalSettings = {};
+
+  // Initialize
+  window.addEventListener('load', () => {
+    loadUserInfo();
+    loadSettings();
+  });
+
+  // Load user info
+  function loadUserInfo() {
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) document.getElementById('navUser').textContent = data.user.username;
+      })
+      .catch(() => {});
+
+    document.getElementById('navDate').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // Load settings
+  function loadSettings() {
+    API.get('/api/settings', (data) => {
+      if (data.success && data.settings) {
+        const settings = data.settings;
+        originalSettings = JSON.parse(JSON.stringify(settings));
+
+        // Populate form
+        document.getElementById('shopName').value = settings.shop_name || 'Ayini Home Products';
+        document.getElementById('gstinNumber').value = settings.gstin_number || '';
+        document.getElementById('gstSlider').value = settings.gst_rate || 0;
+        updateGstDisplay();
+
+        setTheme(settings.theme_mode || 'dark', true);
+        setProductView(settings.product_view || 'grid', true);
+      }
+    }, (err) => {
+      showAlert('Error loading settings: ' + err, 'error');
+    });
+  }
+
+  // Update GST display
+  function updateGstDisplay() {
+    const value = document.getElementById('gstSlider').value;
+    document.getElementById('gstValue').textContent = value;
+  }
+
+  // Set theme
+  function setTheme(mode, silent = false) {
+    document.getElementById('themeDarkBtn').classList.toggle('active', mode === 'dark');
+    document.getElementById('themeLightBtn').classList.toggle('active', mode === 'light');
+    
+    // Apply theme
+    document.documentElement.style.colorScheme = mode;
+    if (mode === 'dark') {
+      document.body.style.background = 'var(--cream)';
+    } else {
+      document.body.style.background = '#f5f5f5';
+    }
+
+    if (!silent) {
+      showAlert(`Theme changed to ${mode} mode`, 'success');
+    }
+  }
+
+  // Set product view
+  function setProductView(view, silent = false) {
+    document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
+    document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+
+    if (!silent) {
+      showAlert(`Product view changed to ${view === 'grid' ? 'grid' : 'list'} view`, 'success');
+    }
+  }
+
+  // Reset form
+  function resetForm() {
+    if (originalSettings) {
+      loadSettings();
+      showAlert('Changes discarded', 'success');
+    }
+  }
+
+  // Save settings
+  function saveSettings() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    const payload = {
+      shopName: document.getElementById('shopName').value,
+      gstinNumber: document.getElementById('gstinNumber').value,
+      gstRate: parseFloat(document.getElementById('gstSlider').value),
+      themeMode: document.querySelector('.toggle-btn.active').id === 'themeDarkBtn' ? 'dark' : 'light',
+      productView: document.querySelector('.view-option.active').id === 'gridViewBtn' ? 'grid' : 'list'
+    };
+
+    API.put('/api/settings', payload, (data) => {
+      btn.disabled = false;
+      btn.textContent = 'Update Settings';
+
+      if (data.success) {
+        originalSettings = JSON.parse(JSON.stringify(data.settings));
+        showAlert('Settings updated successfully! ✓', 'success');
+      }
+    }, (err) => {
+      btn.disabled = false;
+      btn.textContent = 'Update Settings';
+      showAlert('Error saving settings: ' + err, 'error');
+    });
+  }
+
+  // Show alert
+  function showAlert(msg, type) {
+    const alert = document.getElementById('alertBox');
+    alert.textContent = msg;
+    alert.className = `alert ${type}`;
+    setTimeout(() => alert.className = 'alert', 5000);
+  }
+</script>
+</body>
+</html>
