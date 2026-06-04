@@ -17,6 +17,14 @@ router.get('/', authMiddleware, (req, res) => {
   res.json(bills);
 });
 
+// Temporary — reset bill counter to match actual bill count. Visit once then remove.
+router.get('/reset-counter', (req, res) => {
+  const maxBill = get("SELECT MAX(bill_no) as max_no FROM bills");
+  const nextNo = maxBill?.max_no ? maxBill.max_no + 1 : 1;
+  run("UPDATE bill_counter SET count = ? WHERE id = 1", [nextNo]);
+  res.json({ message: 'Counter reset', next_bill_no: nextNo });
+});
+
 // GET /api/bills/:id  — get bill with items
 router.get('/:id', authMiddleware, (req, res) => {
   const bill = get("SELECT * FROM bills WHERE id = ?", [req.params.id]);
@@ -52,7 +60,6 @@ router.post('/', authMiddleware, (req, res) => {
   const itemStmt = "INSERT INTO bill_items (bill_id, product_id, name, price, qty, total) VALUES (?, ?, ?, ?, ?, ?)";
   items.forEach(item => {
     run(itemStmt, [bill_id, item.product_id||item.id||null, item.name, parseFloat(item.price), parseInt(item.qty), parseFloat(item.total)]);
-    // Deduct stock
     if (item.product_id || item.id) {
       const pid = item.product_id || item.id;
       run("UPDATE products SET stock = MAX(0, stock - ?), updated_at=datetime('now') WHERE id = ?", [parseInt(item.qty), pid]);
@@ -64,12 +71,18 @@ router.post('/', authMiddleware, (req, res) => {
   res.status(201).json({ ...newBill, items: newItems });
 });
 
-// DELETE /api/bills/:id (admin only, soft concept — just removes)
+// DELETE /api/bills/:id — removes bill and resets counter
 router.delete('/:id', authMiddleware, (req, res) => {
   const bill = get("SELECT id FROM bills WHERE id = ?", [req.params.id]);
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
   run("DELETE FROM bill_items WHERE bill_id = ?", [req.params.id]);
   run("DELETE FROM bills WHERE id = ?", [req.params.id]);
+
+  // Reset counter: next bill_no = highest existing bill_no + 1, or 1 if no bills remain
+  const maxBill = get("SELECT MAX(bill_no) as max_no FROM bills");
+  const nextNo = maxBill?.max_no ? maxBill.max_no + 1 : 1;
+  run("UPDATE bill_counter SET count = ? WHERE id = 1", [nextNo]);
+
   res.json({ message: 'Bill deleted' });
 });
 

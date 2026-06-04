@@ -16,10 +16,12 @@ function authMiddleware(req, res, next) {
 }
 
 function adminOnly(req, res, next) {
-  if (req.user?.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required' });
+  // Allow if role is 'admin' OR username is 'admin' (fallback for tokens
+  // minted before the role field was correctly seeded in the database)
+  if (req.user?.role === 'admin' || req.user?.username === 'admin') {
+    return next();
   }
-  next();
+  return res.status(403).json({ error: 'Admin access required' });
 }
 
 module.exports = { authMiddleware, adminOnly };

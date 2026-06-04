@@ -28,26 +28,136 @@ router.get('/:id', authMiddleware, (req, res) => {
 
 // POST /api/products  — add product (admin only)
 router.post('/', authMiddleware, adminOnly, (req, res) => {
-  const { name, category, price, stock, unit, code } = req.body;
-  if (!name || !category || price == null) return res.status(400).json({ error: 'name, category and price are required' });
+  let { name, category, price, stock, unit, code } = req.body;
+
+  name = String(name || '').trim();
+  category = String(category || '').trim();
+  unit = String(unit || 'pack').trim();
+
+  price = parseFloat(price);
+  stock = parseInt(stock, 10);
+
+  if (!name) {
+    return res.status(400).json({ error: 'Product name required' });
+  }
+
+  if (!category) {
+    return res.status(400).json({ error: 'Category required' });
+  }
+
+  if (isNaN(price) || price < 0) {
+    return res.status(400).json({ error: 'Invalid price' });
+  }
+
+  if (isNaN(stock) || stock < 0) {
+    stock = 0;
+  }
+
+  if (code !== null && code !== undefined && code !== '') {
+    const exists = get(
+      "SELECT id FROM products WHERE code = ?",
+      [parseInt(code, 10)]
+    );
+
+    if (exists) {
+      return res.status(400).json({ error: 'Product code already exists' });
+    }
+
+    code = parseInt(code, 10);
+  } else {
+    code = null;
+  }
+
   const result = run(
-    "INSERT INTO products (code, name, category, price, stock, unit) VALUES (?, ?, ?, ?, ?, ?)",
-    [code ? parseInt(code) : null, name, category, parseFloat(price), parseInt(stock)||0, unit||'pack']
+    `INSERT INTO products 
+    (code, name, category, price, stock, unit) 
+    VALUES (?, ?, ?, ?, ?, ?)`,
+    [code, name, category, price, stock, unit]
   );
-  const newProd = get("SELECT * FROM products WHERE id = ?", [result.lastInsertRowid]);
+
+  const newProd = get(
+    "SELECT * FROM products WHERE id = ?",
+    [result.lastInsertRowid]
+  );
+
   res.status(201).json(newProd);
 });
 
 // PUT /api/products/:id  — update product (admin only)
 router.put('/:id', authMiddleware, adminOnly, (req, res) => {
-  const { name, category, price, stock, unit, code } = req.body;
-  const p = get("SELECT id FROM products WHERE id = ?", [req.params.id]);
-  if (!p) return res.status(404).json({ error: 'Product not found' });
-  run(
-    "UPDATE products SET code=?, name=?, category=?, price=?, stock=?, unit=?, updated_at=datetime('now') WHERE id=?",
-    [code ? parseInt(code) : null, name, category, parseFloat(price), parseInt(stock), unit, req.params.id]
+  let { name, category, price, stock, unit, code } = req.body;
+
+  const existing = get(
+    "SELECT * FROM products WHERE id = ?",
+    [req.params.id]
   );
-  res.json(get("SELECT * FROM products WHERE id = ?", [req.params.id]));
+
+  if (!existing) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+
+  name = String(name || '').trim();
+  category = String(category || '').trim();
+  unit = String(unit || existing.unit || 'pack').trim();
+
+  price = parseFloat(price);
+  stock = parseInt(stock, 10);
+
+  if (!name) {
+    return res.status(400).json({ error: 'Product name required' });
+  }
+
+  if (!category) {
+    return res.status(400).json({ error: 'Category required' });
+  }
+
+  if (isNaN(price) || price < 0) {
+    return res.status(400).json({ error: 'Invalid price' });
+  }
+
+  if (isNaN(stock) || stock < 0) {
+    stock = 0;
+  }
+
+  if (code !== null && code !== undefined && code !== '') {
+    code = parseInt(code, 10);
+
+    const duplicate = get(
+      "SELECT id FROM products WHERE code = ? AND id != ?",
+      [code, req.params.id]
+    );
+
+    if (duplicate) {
+      return res.status(400).json({ error: 'Product code already exists' });
+    }
+  } else {
+    code = null;
+  }
+
+  run(
+    `UPDATE products 
+     SET code=?,
+         name=?,
+         category=?,
+         price=?,
+         stock=?,
+         unit=?,
+         updated_at=datetime('now')
+     WHERE id=?`,
+    [
+      code,
+      name,
+      category,
+      price,
+      stock,
+      unit,
+      req.params.id
+    ]
+  );
+
+  res.json(
+    get("SELECT * FROM products WHERE id = ?", [req.params.id])
+  );
 });
 
 // PATCH /api/products/:id/stock  — adjust stock only
