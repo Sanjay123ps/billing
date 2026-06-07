@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
-const { query, run, get } = require(path.join(process.env.APP_ROOT || __dirname, '..', 'db'));
-const { authenticateToken } = require(path.join(process.env.APP_ROOT || __dirname, '..', 'middleware', 'auth'));
+const { query, run, get } = require('../db');
+const { authenticateToken } = require('../middleware/auth');
 
 // Middleware: Check authentication
 router.use(authenticateToken);

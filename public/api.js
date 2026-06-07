@@ -136,3 +136,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const userEl = document.getElementById('navUser');
   if (userEl) { const u = getUser(); if (u) userEl.textContent = u.username; }
 });
+
+// ===== API COMPATIBILITY LAYER =====
+// purchases.html, settings.html etc. use callback-style API.get/post/put/delete
+// This wraps apiFetch (Promise-based) to support that older pattern.
+const API = {
+  // Strip the /api prefix from URL since apiFetch already uses API_BASE which includes /api
+  _path(url) {
+    return url.replace(/^\/api/, '');
+  },
+  get(url, onSuccess, onError) {
+    apiFetch(this._path(url))
+      .then(data => onSuccess && onSuccess(data))
+      .catch(err => onError ? onError(err.message || err) : console.error(err));
+  },
+  post(url, body, onSuccess, onError) {
+    apiFetch(this._path(url), { method: 'POST', body: JSON.stringify(body) })
+      .then(data => onSuccess && onSuccess(data))
+      .catch(err => onError ? onError(err) : console.error(err));
+  },
+  put(url, body, onSuccess, onError) {
+    apiFetch(this._path(url), { method: 'PUT', body: JSON.stringify(body) })
+      .then(data => onSuccess && onSuccess(data))
+      .catch(err => onError ? onError(err) : console.error(err));
+  },
+  delete(url, onSuccess, onError) {
+    apiFetch(this._path(url), { method: 'DELETE' })
+      .then(data => onSuccess && onSuccess(data))
+      .catch(err => onError ? onError(err) : console.error(err));
+  },
+};

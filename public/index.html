@@ -1,4 +1,4 @@
-f<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -19,6 +19,124 @@ f<!DOCTYPE html>
     background-color: #ffffff !important;
   }
  input::placeholder { color: #a09a8e !important; -webkit-text-fill-color: #a09a8e !important; }
+
+  /* ===== LIGHT THEME OVERRIDES ===== */
+  html[data-theme="light"] {
+    --cream: #f5f5f0;
+    --text-dark: #1c1a16;
+    --text-mid: #4a4740;
+    --text-muted: #888580;
+    --border: #d4d0ca;
+    --border-light: #e8e4de;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  html[data-theme="light"] body {
+    background: #f0f0eb !important;
+    color: #1c1a16;
+  }
+  html[data-theme="light"] .navbar {
+    background: #2a5c1a !important;
+  }
+  html[data-theme="light"] .product-sidebar {
+    background: #fff !important;
+    border-color: #ddd !important;
+  }
+  html[data-theme="light"] .bill-card {
+    background: #fff !important;
+    border-color: #ddd !important;
+  }
+  html[data-theme="light"] .sidebar-header {
+    background: #f0f7e8 !important;
+    border-color: #ddd !important;
+  }
+  html[data-theme="light"] .search-input {
+    background: #fff !important;
+    border-color: #ccc !important;
+    color: #1c1a16 !important;
+  }
+  html[data-theme="light"] .select-input,
+  html[data-theme="light"] .select-sm {
+    background: #fff !important;
+    border-color: #ccc !important;
+    color: #1c1a16 !important;
+  }
+  html[data-theme="light"] .bill-table thead tr {
+    background: #f0f7e8 !important;
+    color: #1c1a16 !important;
+  }
+  html[data-theme="light"] .totals-panel {
+    background: #f0f7e8 !important;
+    border-color: #c0dd97 !important;
+  }
+
+  /* ===== PRODUCT GRID VIEW (default) ===== */
+  #productGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+    padding: 4px 0;
+  }
+  #productGrid .product-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    border: 1.5px solid var(--border-light);
+    background: var(--surface, #fff);
+    transition: all 0.15s;
+    gap: 4px;
+  }
+  #productGrid .product-card:hover {
+    border-color: var(--green-700, #3B6D11);
+    box-shadow: 0 2px 8px rgba(59,109,17,0.15);
+    transform: translateY(-1px);
+  }
+  #productGrid .product-card .p-name {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-dark);
+    line-height: 1.3;
+  }
+  #productGrid .product-card .p-price {
+    font-size: 13px; font-weight: 700;
+    color: var(--green-700, #3B6D11);
+  }
+  #productGrid .product-card .p-stock {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* ===== PRODUCT LIST VIEW ===== */
+  #productGrid.list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  #productGrid.list-view .product-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    text-align: left;
+    border-radius: 8px;
+    gap: 8px;
+  }
+  #productGrid.list-view .product-card .p-name {
+    flex: 1;
+    font-size: 13px;
+  }
+  #productGrid.list-view .product-card .p-price {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  #productGrid.list-view .product-card .p-stock {
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 60px;
+    text-align: right;
+  }
 
   /* ===== CASH CHANGE MODAL ===== */
   .cash-modal-overlay {
@@ -147,7 +265,13 @@ f<!DOCTYPE html>
 </style>
 </head>
 <body>
-
+<script>
+  /* ── Apply saved theme IMMEDIATELY (before render, prevents flash) ── */
+  (function() {
+    var theme = localStorage.getItem('ayini_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
 <nav class="navbar">
   <div class="nav-inner">
     <a class="brand" href="index.html">
@@ -410,6 +534,35 @@ f<!DOCTYPE html>
 </nav>
 <script src="api.js"></script>
 <script src="billing.js"></script>
+<script>
+/* ── Apply saved product view (grid/list) once billing.js has rendered products ── */
+(function applyProductView() {
+  var view = localStorage.getItem('ayini_view') || 'grid';
+  var grid = document.getElementById('productGrid');
+  if (!grid) return;
+  if (view === 'list') {
+    grid.classList.add('list-view');
+  } else {
+    grid.classList.remove('list-view');
+  }
+})();
+
+/* ── Re-apply view whenever products finish loading (billing.js calls renderProducts) ── */
+/* We observe the productGrid for child changes so list-view class sticks after re-render */
+(function watchProductGrid() {
+  var grid = document.getElementById('productGrid');
+  if (!grid) return;
+  var observer = new MutationObserver(function() {
+    var view = localStorage.getItem('ayini_view') || 'grid';
+    if (view === 'list') {
+      grid.classList.add('list-view');
+    } else {
+      grid.classList.remove('list-view');
+    }
+  });
+  observer.observe(grid, { childList: true });
+})();
+</script>
 <script>
 window.addEventListener('DOMContentLoaded', async () => {
   const raw = sessionStorage.getItem('editing_bill');

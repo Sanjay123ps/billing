@@ -2,7 +2,7 @@ const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const { get, run } = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 const JWT_SECRET  = process.env.JWT_SECRET  || 'ayini_billing_secret_2025';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h';
@@ -23,7 +23,7 @@ router.post('/login', (req, res) => {
 });
 
 // POST /api/auth/change-password  (protected)
-router.post('/change-password', authMiddleware, (req, res) => {
+router.post('/change-password', authenticateToken, (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
   if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
@@ -37,7 +37,7 @@ router.post('/change-password', authMiddleware, (req, res) => {
 });
 
 // GET /api/auth/me  (protected)
-router.get('/me', authMiddleware, (req, res) => {
+router.get('/me', authenticateToken, (req, res) => {
   res.json({ user: req.user });
 });
 

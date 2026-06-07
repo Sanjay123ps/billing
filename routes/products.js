@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const { query, run, get } = require('../db');
-const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { authenticateToken, adminOnly } = require('../middleware/auth');
 
 // GET /api/products  — get all products
-router.get('/', authMiddleware, (req, res) => {
+router.get('/', authenticateToken, (req, res) => {
   const { cat, search } = req.query;
   let sql = "SELECT * FROM products WHERE 1=1";
   const params = [];
@@ -14,20 +14,20 @@ router.get('/', authMiddleware, (req, res) => {
 });
 
 // GET /api/products/categories
-router.get('/categories', authMiddleware, (req, res) => {
+router.get('/categories', authenticateToken, (req, res) => {
   const cats = query("SELECT DISTINCT category FROM products ORDER BY category");
   res.json(cats.map(c => c.category));
 });
 
 // GET /api/products/:id
-router.get('/:id', authMiddleware, (req, res) => {
+router.get('/:id', authenticateToken, (req, res) => {
   const p = get("SELECT * FROM products WHERE id = ?", [req.params.id]);
   if (!p) return res.status(404).json({ error: 'Product not found' });
   res.json(p);
 });
 
 // POST /api/products  — add product (admin only)
-router.post('/', authMiddleware, adminOnly, (req, res) => {
+router.post('/', authenticateToken, adminOnly, (req, res) => {
   let { name, category, price, stock, unit, code } = req.body;
 
   name = String(name || '').trim();
@@ -84,7 +84,7 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
 });
 
 // PUT /api/products/:id  — update product (admin only)
-router.put('/:id', authMiddleware, adminOnly, (req, res) => {
+router.put('/:id', authenticateToken, adminOnly, (req, res) => {
   let { name, category, price, stock, unit, code } = req.body;
 
   const existing = get(
@@ -161,7 +161,7 @@ router.put('/:id', authMiddleware, adminOnly, (req, res) => {
 });
 
 // PATCH /api/products/:id/stock  — adjust stock only
-router.patch('/:id/stock', authMiddleware, (req, res) => {
+router.patch('/:id/stock', authenticateToken, (req, res) => {
   const { stock, delta } = req.body;
   const p = get("SELECT * FROM products WHERE id = ?", [req.params.id]);
   if (!p) return res.status(404).json({ error: 'Product not found' });
@@ -177,7 +177,7 @@ router.patch('/:id/stock', authMiddleware, (req, res) => {
 });
 
 // DELETE /api/products/:id  — delete product (admin only)
-router.delete('/:id', authMiddleware, adminOnly, (req, res) => {
+router.delete('/:id', authenticateToken, adminOnly, (req, res) => {
   const p = get("SELECT id FROM products WHERE id = ?", [req.params.id]);
   if (!p) return res.status(404).json({ error: 'Product not found' });
   run("DELETE FROM products WHERE id = ?", [req.params.id]);

@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'ayini_billing_secret_2025';
 
-function authMiddleware(req, res, next) {
+function authenticateToken(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' });
@@ -24,4 +24,4 @@ function adminOnly(req, res, next) {
   return res.status(403).json({ error: 'Admin access required' });
 }
 
-module.exports = { authMiddleware, adminOnly };
+module.exports = { authenticateToken, adminOnly };

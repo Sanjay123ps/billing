@@ -1,20 +1,3 @@
-// ===== ADD THESE LINES TO server.js AFTER EXISTING ROUTE IMPORTS =====
-
-// AFTER: const reportRoutes  = require(path.join(APP_ROOT, 'routes', 'reports'));
-
-const purchaseRoutes = require(path.join(APP_ROOT, 'routes', 'purchases'));
-const settingsRoutes = require(path.join(APP_ROOT, 'routes', 'settings'));
-
-// ===== THEN ADD THESE LINES IN THE API ROUTES SECTION =====
-
-// AFTER: app.use('/api/reports',  reportRoutes);
-
-app.use('/api/purchases', purchaseRoutes);
-app.use('/api/settings',  settingsRoutes);
-
-// ===== COMPLETE server.js SHOULD LOOK LIKE THIS: =====
-
-/*
 const express  = require('express');
 const cors     = require('cors');
 const path     = require('path');
@@ -42,6 +25,7 @@ app.get('/sw.js', (req, res) => {
   res.setHeader('Service-Worker-Allowed', '/');
   res.sendFile(path.join(__dirname, 'public', 'sw.js'));
 });
+
 // Serve frontend static files
 app.use(express.static(path.join(APP_ROOT, 'public')));
 
@@ -62,12 +46,14 @@ app.get('*', (req, res) => {
 });
 
 // Init DB then start server
+let server;
 initDB().then(() => {
-  app.listen(PORT, () => {
+  server = app.listen(PORT, () => {
     console.log(`\n🌿 Ayini Billing Server running at http://localhost:${PORT}`);
   });
 }).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });
-*/
+
+module.exports = server;

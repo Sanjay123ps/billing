@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const { query, run, get } = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/bills  — list all bills (newest first)
-router.get('/', authMiddleware, (req, res) => {
+router.get('/', authenticateToken, (req, res) => {
   const { search, payment, from, to, limit = 100, offset = 0 } = req.query;
   let sql = "SELECT * FROM bills WHERE 1=1";
   const params = [];
@@ -26,7 +26,7 @@ router.get('/reset-counter', (req, res) => {
 });
 
 // GET /api/bills/:id  — get bill with items
-router.get('/:id', authMiddleware, (req, res) => {
+router.get('/:id', authenticateToken, (req, res) => {
   const bill = get("SELECT * FROM bills WHERE id = ?", [req.params.id]);
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
   const items = query("SELECT * FROM bill_items WHERE bill_id = ? ORDER BY id ASC", [req.params.id]);
@@ -34,7 +34,7 @@ router.get('/:id', authMiddleware, (req, res) => {
 });
 
 // POST /api/bills  — create new bill
-router.post('/', authMiddleware, (req, res) => {
+router.post('/', authenticateToken, (req, res) => {
   const { customer, mobile, payment_mode, gst_rate, subtotal, gst_amount, discount, total, items } = req.body;
   if (!items || items.length === 0) return res.status(400).json({ error: 'Bill must have at least one item' });
 
@@ -72,7 +72,7 @@ router.post('/', authMiddleware, (req, res) => {
 });
 
 // DELETE /api/bills/:id — removes bill and resets counter
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', authenticateToken, (req, res) => {
   const bill = get("SELECT id FROM bills WHERE id = ?", [req.params.id]);
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
   run("DELETE FROM bill_items WHERE bill_id = ?", [req.params.id]);
@@ -87,7 +87,7 @@ router.delete('/:id', authMiddleware, (req, res) => {
 });
 
 // PATCH /api/bills/:id/pay — mark credit bill as paid
-router.patch('/:id/pay', authMiddleware, (req, res) => {
+router.patch('/:id/pay', authenticateToken, (req, res) => {
   const b = get("SELECT id FROM bills WHERE id = ?", [req.params.id]);
   if (!b) return res.status(404).json({ error: 'Bill not found' });
   run("UPDATE bills SET payment_mode = ? WHERE id = ?", [req.body.payment_mode || 'Cash', req.params.id]);

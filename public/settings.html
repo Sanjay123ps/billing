@@ -16,6 +16,27 @@
     }
     input::placeholder { color: #a09a8e !important; }
 
+    /* ===== LIGHT THEME OVERRIDES ===== */
+    html[data-theme="light"] {
+      --cream: #f5f5f0;
+      --text-dark: #1c1a16;
+      --text-mid: #4a4740;
+      --text-muted: #888580;
+      --border: #d4d0ca;
+      --border-light: #e8e4de;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    html[data-theme="light"] body            { background: #f0f0eb !important; color: #1c1a16; }
+    html[data-theme="light"] .navbar         { background: #2a5c1a !important; }
+    html[data-theme="light"] .settings-section { background: #ffffff; border-color: #ddd; }
+    html[data-theme="light"] .toggle-btn     { background: #fff; color: #4a4740; border-color: #ccc; }
+    html[data-theme="light"] .view-option    { background: #fff; border-color: #ccc; color: #1c1a16; }
+    html[data-theme="light"] .form-input,
+    html[data-theme="light"] .form-select    { background: #fff !important; border-color: #ccc; color: #1c1a16 !important; -webkit-text-fill-color: #1c1a16 !important; }
+    html[data-theme="light"] .info-box       { background: #f0f7e8; border-color: #b8d9a0; }
+    html[data-theme="light"] .settings-footer { border-top-color: #ddd; }
+    html[data-theme="light"] .btn-reset      { background: #e0ddd8; color: #1c1a16; }
+
     /* Page layout */
     .settings-container {
       max-width: 900px; margin: 0 auto; padding: 2rem;
@@ -198,6 +219,11 @@
       color: #fff;
     }
 
+    /* Sub-text inside active card stays readable */
+    .view-option.active > div:last-child {
+      color: rgba(255,255,255,0.75) !important;
+    }
+
     .view-option-icon {
       font-size: 28px; margin-bottom: 8px;
     }
@@ -237,39 +263,59 @@
       background: var(--border-light);
     }
 
+    /* FIXED: Better Save Button with loading state */
     .btn-save {
       padding: 12px 24px; background: var(--green-700);
       color: #fff; border: none; border-radius: 6px;
       font-size: 13px; font-weight: 700; cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
 
     .btn-save:hover {
       background: var(--green-800);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59,109,17,0.3);
+    }
+
+    .btn-save:active {
+      transform: translateY(0);
     }
 
     .btn-save:disabled {
-      opacity: 0.6; cursor: not-allowed;
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
     }
 
-    /* Alert messages */
+    /* Alert */
     .alert {
-      padding: 12px 16px; border-radius: 8px; margin-bottom: 1rem;
-      font-size: 13px; display: none;
+      display: none; position: fixed; top: 20px; right: 20px;
+      padding: 12px 20px; border-radius: 8px;
+      font-size: 14px; z-index: 300;
+      animation: slideIn 0.3s ease;
     }
 
     .alert.success {
       background: var(--green-50); color: var(--green-800);
-      border: 1.5px solid var(--green-200); display: block;
+      border: 1.5px solid rgba(59,109,17,0.2); display: block;
     }
 
     .alert.error {
       background: var(--red-100); color: var(--red-600);
       border: 1.5px solid rgba(163,45,45,0.3); display: block;
     }
+
+    @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   </style>
 </head>
 <body>
+<script>
+  /* ── Apply saved theme IMMEDIATELY (prevents flash) ── */
+  (function() {
+    var theme = localStorage.getItem('ayini_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
 <nav class="navbar">
   <div class="nav-inner">
     <a class="brand" href="index.html">
@@ -348,8 +394,8 @@
     <div class="toggle-group">
       <span class="toggle-label">Appearance</span>
       <div class="toggle-switch">
-        <button class="toggle-btn active" id="themeDarkBtn" onclick="setTheme('dark')">🌙 Dark</button>
-        <button class="toggle-btn" id="themeLightBtn" onclick="setTheme('light')">☀️ Light</button>
+        <button class="toggle-btn active" data-theme="dark" onclick="setTheme('dark')">🌙 Dark</button>
+        <button class="toggle-btn" data-theme="light" onclick="setTheme('light')">☀️ Light</button>
       </div>
     </div>
     <div class="info-box">
@@ -363,12 +409,12 @@
     <h2 class="section-title">Product Display Style</h2>
     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Choose how products appear on the billing page</p>
     <div class="view-options">
-      <div class="view-option active" id="gridViewBtn" onclick="setProductView('grid')">
+      <div class="view-option active" data-view="grid" onclick="setProductView('grid')">
         <div class="view-option-icon">⚙️</div>
         <div class="view-option-label">Grid View</div>
         <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Products as cards</div>
       </div>
-      <div class="view-option" id="listViewBtn" onclick="setProductView('list')">
+      <div class="view-option" data-view="list" onclick="setProductView('list')">
         <div class="view-option-icon">📋</div>
         <div class="view-option-label">List View</div>
         <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Products in a table</div>
@@ -386,9 +432,26 @@
 <script src="api.js"></script>
 <script>
   let originalSettings = {};
+  let currentTheme = 'dark';
+  let currentView = 'grid';
 
   // Initialize
   window.addEventListener('load', () => {
+    // Apply saved theme & view immediately (before API responds)
+    const savedTheme = localStorage.getItem('ayini_theme') || 'dark';
+    const savedView  = localStorage.getItem('ayini_view')  || 'grid';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    currentTheme = savedTheme;
+    currentView  = savedView;
+
+    // Update button states to match saved values
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-theme') === savedTheme);
+    });
+    document.querySelectorAll('.view-option').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-view') === savedView);
+    });
+
     loadUserInfo();
     loadSettings();
   });
@@ -434,29 +497,37 @@
 
   // Set theme
   function setTheme(mode, silent = false) {
-    document.getElementById('themeDarkBtn').classList.toggle('active', mode === 'dark');
-    document.getElementById('themeLightBtn').classList.toggle('active', mode === 'light');
-    
-    // Apply theme
-    document.documentElement.style.colorScheme = mode;
-    if (mode === 'dark') {
-      document.body.style.background = 'var(--cream)';
-    } else {
-      document.body.style.background = '#f5f5f5';
-    }
+    currentTheme = mode;
+
+    // Update button active states
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-theme') === mode);
+    });
+
+    // Apply theme via data-theme attribute on <html>
+    document.documentElement.setAttribute('data-theme', mode);
+    // Save to localStorage so ALL pages pick it up
+    localStorage.setItem('ayini_theme', mode);
 
     if (!silent) {
-      showAlert(`Theme changed to ${mode} mode`, 'success');
+      showAlert(`✓ Theme changed to ${mode} mode`, 'success');
     }
   }
 
   // Set product view
   function setProductView(view, silent = false) {
-    document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
-    document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+    currentView = view;
+
+    // Update button active states
+    document.querySelectorAll('.view-option').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-view') === view);
+    });
+
+    // Save to localStorage so billing page picks it up
+    localStorage.setItem('ayini_view', view);
 
     if (!silent) {
-      showAlert(`Product view changed to ${view === 'grid' ? 'grid' : 'list'} view`, 'success');
+      showAlert(`✓ Product view changed to ${view === 'grid' ? 'Grid' : 'List'} view`, 'success');
     }
   }
 
@@ -464,22 +535,37 @@
   function resetForm() {
     if (originalSettings) {
       loadSettings();
-      showAlert('Changes discarded', 'success');
+      showAlert('✓ Changes discarded', 'success');
     }
   }
 
-  // Save settings
+  // Save settings - FIXED: Better validation and error handling
   function saveSettings() {
     const btn = document.getElementById('saveBtn');
+    const shopName = document.getElementById('shopName').value.trim();
+    const gstinNumber = document.getElementById('gstinNumber').value.trim();
+    const gstRate = parseFloat(document.getElementById('gstSlider').value);
+
+    // Validation
+    if (!shopName) {
+      showAlert('Please enter a shop name', 'error');
+      return;
+    }
+
+    if (gstRate < 0 || gstRate > 28) {
+      showAlert('GST rate must be between 0% and 28%', 'error');
+      return;
+    }
+
     btn.disabled = true;
     btn.textContent = 'Saving...';
 
     const payload = {
-      shopName: document.getElementById('shopName').value,
-      gstinNumber: document.getElementById('gstinNumber').value,
-      gstRate: parseFloat(document.getElementById('gstSlider').value),
-      themeMode: document.querySelector('.toggle-btn.active').id === 'themeDarkBtn' ? 'dark' : 'light',
-      productView: document.querySelector('.view-option.active').id === 'gridViewBtn' ? 'grid' : 'list'
+      shopName: shopName,
+      gstinNumber: gstinNumber,
+      gstRate: gstRate,
+      themeMode: currentTheme,
+      productView: currentView
     };
 
     API.put('/api/settings', payload, (data) => {
@@ -487,13 +573,16 @@
       btn.textContent = 'Update Settings';
 
       if (data.success) {
-        originalSettings = JSON.parse(JSON.stringify(data.settings));
-        showAlert('Settings updated successfully! ✓', 'success');
+        originalSettings = JSON.parse(JSON.stringify(data.settings || payload));
+        showAlert('✓ Settings updated successfully!', 'success');
+      } else {
+        showAlert('Failed to update settings. Please try again.', 'error');
       }
     }, (err) => {
       btn.disabled = false;
       btn.textContent = 'Update Settings';
-      showAlert('Error saving settings: ' + err, 'error');
+      showAlert('Error saving settings: ' + (err.message || err), 'error');
+      console.error('Save settings error:', err);
     });
   }
 
@@ -502,7 +591,7 @@
     const alert = document.getElementById('alertBox');
     alert.textContent = msg;
     alert.className = `alert ${type}`;
-    setTimeout(() => alert.className = 'alert', 5000);
+    setTimeout(() => alert.className = 'alert', 4000);
   }
 </script>
 </body>

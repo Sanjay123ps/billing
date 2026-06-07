@@ -1,9 +1,9 @@
 const router = require('express').Router();
 const { query, get } = require('../db');
-const { authMiddleware } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/reports/summary  — overall totals
-router.get('/summary', authMiddleware, (req, res) => {
+router.get('/summary', authenticateToken, (req, res) => {
   const totals     = get("SELECT COUNT(*) as bill_count, SUM(total) as revenue, AVG(total) as avg_bill FROM bills");
   const ctr        = get("SELECT count FROM bill_counter WHERE id=1");
   const next_bill_no = ctr ? ctr.count : 1;
@@ -32,7 +32,7 @@ router.get('/summary', authMiddleware, (req, res) => {
 });
 
 // GET /api/reports/daily?days=30  — daily revenue for chart
-router.get('/daily', authMiddleware, (req, res) => {
+router.get('/daily', authenticateToken, (req, res) => {
   const days = parseInt(req.query.days) || 30;
   const rows = query(
     `SELECT date(created_at,'localtime') as day,
@@ -47,7 +47,7 @@ router.get('/daily', authMiddleware, (req, res) => {
 });
 
 // GET /api/reports/top-products?limit=10
-router.get('/top-products', authMiddleware, (req, res) => {
+router.get('/top-products', authenticateToken, (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const rows = query(
     `SELECT name, SUM(qty) as total_qty, SUM(total) as total_revenue
@@ -61,7 +61,7 @@ router.get('/top-products', authMiddleware, (req, res) => {
 });
 
 // GET /api/reports/payment-breakdown
-router.get('/payment-breakdown', authMiddleware, (req, res) => {
+router.get('/payment-breakdown', authenticateToken, (req, res) => {
   const rows = query(
     `SELECT payment_mode, COUNT(*) as count, ROUND(SUM(total),2) as revenue
      FROM bills GROUP BY payment_mode ORDER BY count DESC`
@@ -70,7 +70,7 @@ router.get('/payment-breakdown', authMiddleware, (req, res) => {
 });
 
 // GET /api/reports/category-sales
-router.get('/category-sales', authMiddleware, (req, res) => {
+router.get('/category-sales', authenticateToken, (req, res) => {
   const rows = query(
     `SELECT p.category, SUM(bi.qty) as total_qty, ROUND(SUM(bi.total),2) as revenue
      FROM bill_items bi

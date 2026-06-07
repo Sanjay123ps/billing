@@ -1,4 +1,3 @@
-```js
 // ===== AYINI BILLING — ELECTRON MAIN PROCESS =====
 const { app, BrowserWindow, shell, Menu, dialog } = require('electron');
 const path = require('path');
@@ -55,15 +54,17 @@ function waitForServer(port, timeoutMs = 20000) {
     const start = Date.now();
 
     const attempt = () => {
-      http
-        .get(`http://localhost:${port}/api/health`, (res) => {
+      const request = http.get(
+        `http://localhost:${port}/api/health`,
+        (res) => {
           if (res.statusCode === 200) {
             return resolve();
           }
-
           retry();
-        })
-        .on('error', retry);
+        }
+      );
+
+      request.on('error', retry);
     };
 
     const retry = () => {
@@ -72,7 +73,6 @@ function waitForServer(port, timeoutMs = 20000) {
           new Error('Server did not respond after 20 seconds.')
         );
       }
-
       setTimeout(attempt, 500);
     };
 
@@ -295,7 +295,7 @@ app.whenReady().then(() => {
 
 // Close backend server properly
 app.on('before-quit', () => {
-  if (backendServer) {
+  if (backendServer && backendServer.close) {
     backendServer.close();
   }
 });
@@ -311,4 +311,3 @@ app.on('activate', () => {
     createWindow();
   }
 });
-```
