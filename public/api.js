@@ -171,6 +171,6 @@ const API = {
 // ===== GLOBAL THEME INITIALIZER =====
 // Apply theme BEFORE DOM renders to prevent flashing
 (function() {
-  const savedTheme = localStorage.getItem('ayini_theme') || 'dark';
+  const savedTheme = localStorage.getItem('ayini_theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
 })();

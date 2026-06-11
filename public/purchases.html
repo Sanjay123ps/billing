@@ -98,7 +98,7 @@
 
     .purchase-amount {
       font-family: 'Playfair Display', serif;
-      font-weight: 700; color: var(--green-700);
+      font-size: 18px; font-weight: 700; color: var(--green-700);
     }
 
     .empty-state {
@@ -190,7 +190,7 @@
     }
 
     .item-row {
-      display: grid; grid-template-columns: 1fr 80px 60px;
+      display: grid; grid-template-columns: 2fr 70px 70px 90px auto;
       gap: 8px; margin-bottom: 8px; align-items: flex-end;
     }
 
@@ -314,6 +314,7 @@
   </style>
 </head>
 <body>
+<script>(function(){var t=localStorage.getItem("ayini_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
 <nav class="navbar">
   <div class="nav-inner">
     <a class="brand" href="index.html">
@@ -375,7 +376,7 @@
 <div class="modal-overlay" id="purchaseModal">
   <div class="modal-box">
     <div class="modal-header">
-      <h2 class="modal-title">New Purchase</h2>
+      <h2 class="modal-title" id="purchaseModalTitle">New Purchase</h2>
       <button class="modal-close" onclick="closePurchaseModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -386,6 +387,13 @@
 
       <div class="items-section">
         <div class="items-section-title">Items Purchased</div>
+        <div style="display:grid;grid-template-columns:2fr 70px 70px 90px auto;gap:8px;margin-bottom:4px;padding:0 2px;">
+          <span style="font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.04em;">Item Name</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.04em;">Qty</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.04em;">Nos</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.04em;">Amount (₹)</span>
+          <span></span>
+        </div>
         <div id="itemsContainer"></div>
         <button class="btn-add-item" onclick="addItemRow()">+ Add Item</button>
       </div>
@@ -417,7 +425,7 @@
 
   // Load user info
   function loadUserInfo() {
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${localStorage.getItem('ayini_token')}` } })
       .then(r => r.json())
       .then(data => {
         if (data.user) document.getElementById('navUser').textContent = data.user.username;
@@ -514,12 +522,12 @@
           saveBtn.textContent = 'Update Purchase';
           document.getElementById('shopName').value = p.shop_name;
           
-          // Convert items to new format with qty and nos
+          // Map items from API response — backend uses item_name, qty, nos, amount
           items = p.items.map(i => ({
             name: i.item_name,
-            amount: i.amount,
-            qty: 0,
-            nos: 0
+            qty: i.qty || 0,
+            nos: i.nos || 0,
+            amount: i.amount
           }));
           
           renderItemRows();
@@ -623,10 +631,10 @@
 
     const successHandler = (data) => {
       btn.disabled = false;
-      btn.textContent = editingPurchaseId ? 'Update Purchase' : 'Save Purchase';
+      btn.textContent = isUpdate ? 'Update Purchase' : 'Save Purchase';
       
-      if (data.success) {
-        showAlert(`✓ Purchase ${editingPurchaseId ? 'updated' : 'saved'} successfully!`, 'success');
+      if (data && data.success) {
+        showAlert(`✓ Purchase ${isUpdate ? 'updated' : 'saved'} successfully!`, 'success');
         setTimeout(() => {
           closePurchaseModal();
           loadPurchases();
@@ -638,8 +646,9 @@
 
     const errorHandler = (err) => {
       btn.disabled = false;
-      btn.textContent = editingPurchaseId ? 'Update Purchase' : 'Save Purchase';
-      showAlert('Error saving purchase: ' + (err.message || err), 'error');
+      btn.textContent = isUpdate ? 'Update Purchase' : 'Save Purchase';
+      const msg = (err && (err.message || err)) || 'Unknown error';
+      showAlert('Error saving purchase: ' + msg, 'error');
       console.error('Save purchase error:', err);
     };
 

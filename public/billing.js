@@ -75,37 +75,45 @@ function addGrindingService(type, weightKg) {
 // Load GST rate from settings
 async function loadGstRateFromSettings() {
   try {
-    const response = await fetch('/api/settings');
+    // First try localStorage for instant update (set by settings page on save)
+    const cachedRate = localStorage.getItem('ayini_gst_rate');
+    
+    const token = getToken();
+    const response = await fetch('/api/settings', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     const data = await response.json();
     if (data.success && data.settings) {
       const gstRate = data.settings.gst_rate;
-      const gstDropdown = document.getElementById('gstRate');
-      
-      if (gstDropdown) {
-        // Check if the GST rate is in the dropdown options
-        const hasOption = Array.from(gstDropdown.options).some(o => o.value === String(gstRate));
-        
-        if (hasOption) {
-          gstDropdown.value = String(gstRate);
-        } else {
-          // Use custom option
-          gstDropdown.value = 'custom';
-          const customInput = document.getElementById('customGst');
-          if (customInput) {
-            customInput.value = gstRate;
-            customInput.style.display = 'block';
-          }
-        }
-        
-        // Recalculate bill with new GST
-        if (typeof recalc === 'function') {
-          recalc();
-        }
-      }
+      // Keep localStorage in sync
+      localStorage.setItem('ayini_gst_rate', String(gstRate));
+      applyGstRateToUI(gstRate);
+    } else if (cachedRate !== null) {
+      applyGstRateToUI(parseFloat(cachedRate));
     }
   } catch (e) {
     console.error('Failed to load GST from settings:', e);
+    // Fallback to localStorage
+    const cachedRate = localStorage.getItem('ayini_gst_rate');
+    if (cachedRate !== null) applyGstRateToUI(parseFloat(cachedRate));
   }
+}
+
+function applyGstRateToUI(gstRate) {
+  const gstDropdown = document.getElementById('gstRate');
+  if (!gstDropdown) return;
+  const hasOption = Array.from(gstDropdown.options).some(o => o.value === String(gstRate));
+  if (hasOption) {
+    gstDropdown.value = String(gstRate);
+  } else {
+    gstDropdown.value = 'custom';
+    const customInput = document.getElementById('customGst');
+    if (customInput) {
+      customInput.value = gstRate;
+      customInput.style.display = 'block';
+    }
+  }
+  if (typeof recalc === 'function') recalc();
 }
 
 async function init() {
@@ -347,7 +355,12 @@ function recalc() {
 function buildReceiptText() {
   const custName   = document.getElementById('custName').value || 'Walk-in Customer';
   const custMobile = document.getElementById('custMobile').value || '—';
-  const gst     = parseFloat(document.getElementById('gstRate').value) || 0;
+  let gst = document.getElementById('gstRate').value;
+  if (gst === 'custom') {
+    gst = parseFloat(document.getElementById('customGst')?.value) || 0;
+  } else {
+    gst = parseFloat(gst) || 0;
+  }
   const discPct = parseFloat(document.getElementById('discount').value) || 0;
   const mode    = document.getElementById('payMode').value;
   const sub     = billItems.reduce((s, i) => s + i.price * i.qty, 0);
@@ -399,11 +412,15 @@ function buildReceiptText() {
   return lines.join('\n');
 }
 
-// ── HTML Receipt — bilingual + QR + full address ──────────────────────────────
 function buildReceiptHTML() {
   const custName   = document.getElementById('custName').value || 'Walk-in Customer';
   const custMobile = document.getElementById('custMobile').value || '—';
-  const gst     = parseFloat(document.getElementById('gstRate').value) || 0;
+  let gst = document.getElementById('gstRate').value;
+  if (gst === 'custom') {
+    gst = parseFloat(document.getElementById('customGst')?.value) || 0;
+  } else {
+    gst = parseFloat(gst) || 0;
+  }
   const discPct = parseFloat(document.getElementById('discount').value) || 0;
   const mode    = document.getElementById('payMode').value;
   const sub     = billItems.reduce((s, i) => s + i.price * i.qty, 0);
@@ -722,7 +739,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 // Listen for GST rate changes from settings page
 window.addEventListener('storage', (e) => {
-  if (e.key === 'ayini_gst_rate_updated') {
+  if (e.key === 'ayini_gst_rate_updated' || e.key === 'ayini_gst_rate') {
     loadGstRateFromSettings();
   }
   if (e.key === 'ayini_theme') {

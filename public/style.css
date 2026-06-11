@@ -747,6 +747,158 @@ body {
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
+/* ===== DARK THEME ===== */
+html[data-theme="dark"] {
+  --cream: #1a1d1a;
+  --cream-dark: #222623;
+  --text-dark: #e8e6e0;
+  --text-mid: #b0ae9a;
+  --text-muted: #7a7870;
+  --border: #3a3d38;
+  --border-light: #2e3228;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.3);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+  --green-50: #1e2b18;
+  --green-100: #243020;
+  --green-200: #2e4028;
+  --amber-50: #2a2318;
+  --amber-100: #352a18;
+  --red-100: #2e1818;
+}
+
+html[data-theme="dark"] body {
+  background: #181b18;
+  color: var(--text-dark);
+}
+
+html[data-theme="dark"] .navbar {
+  background: #1a2e10;
+  border-bottom-color: #2d5c14;
+}
+
+html[data-theme="dark"] .product-sidebar,
+html[data-theme="dark"] .bill-card,
+html[data-theme="dark"] .settings-section,
+html[data-theme="dark"] .modal-box,
+html[data-theme="dark"] .purchases-table,
+html[data-theme="dark"] .data-table {
+  background: #1e221e;
+  border-color: #333633;
+}
+
+html[data-theme="dark"] .bill-table thead tr,
+html[data-theme="dark"] .purchases-table thead,
+html[data-theme="dark"] .data-table thead tr {
+  background: linear-gradient(135deg, #1a3a0a, #2d5c14);
+}
+
+html[data-theme="dark"] .bill-table td,
+html[data-theme="dark"] .purchases-table td,
+html[data-theme="dark"] .data-table td {
+  border-bottom-color: #2a2e2a;
+  color: var(--text-dark);
+}
+
+html[data-theme="dark"] .bill-table tbody tr:hover,
+html[data-theme="dark"] .purchases-table tbody tr:hover {
+  background: #222823;
+}
+
+html[data-theme="dark"] .totals-panel {
+  background: #1e221e;
+  border-color: #333633;
+}
+
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] select,
+html[data-theme="dark"] .form-input,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .search-input,
+html[data-theme="dark"] .select-input,
+html[data-theme="dark"] .select-sm {
+  background: #252925 !important;
+  color: #e8e6e0 !important;
+  -webkit-text-fill-color: #e8e6e0 !important;
+  border-color: #3a3d38 !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] .form-input::placeholder {
+  color: #5a5e58 !important;
+}
+
+html[data-theme="dark"] .pc-card {
+  background: #1e221e;
+  border-color: #333633;
+}
+
+html[data-theme="dark"] .pc-card:hover {
+  background: #252925;
+  border-color: #4e8a18;
+}
+
+html[data-theme="dark"] .sidebar-header {
+  background: linear-gradient(135deg, #1a3a0a, #2d5c14);
+}
+
+html[data-theme="dark"] .modal-body,
+html[data-theme="dark"] .modal-footer {
+  background: #1e221e;
+}
+
+html[data-theme="dark"] .items-section {
+  background: #1a2b18;
+  border-color: #2e4028;
+}
+
+html[data-theme="dark"] .purchase-total,
+html[data-theme="dark"] .info-box {
+  background: #1a2b18;
+  border-color: #2e4028;
+}
+
+html[data-theme="dark"] .toggle-btn,
+html[data-theme="dark"] .view-option {
+  background: #252925;
+  border-color: #3a3d38;
+  color: var(--text-dark);
+}
+
+html[data-theme="dark"] .btn-cancel,
+html[data-theme="dark"] .btn-reset {
+  background: #2e3228;
+  color: var(--text-dark);
+}
+
+html[data-theme="dark"] .filter-btn {
+  background: #252925;
+  border-color: #3a3d38;
+  color: var(--text-mid);
+}
+
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .section-card,
+html[data-theme="dark"] .report-card {
+  background: #1e221e;
+  border-color: #333633;
+}
+
+html[data-theme="dark"] .cat-chip {
+  background: #252925;
+  border-color: #3a3d38;
+  color: var(--text-mid);
+}
+
+html[data-theme="dark"] .cat-chip.active {
+  background: var(--green-700);
+  color: #fff;
+}
+
+/* ===== END DARK THEME ===== */
+
 @media print {
   .navbar, .product-sidebar, .bill-footer, .action-bar,
   .mobile-bottom-nav { display: none !important; }

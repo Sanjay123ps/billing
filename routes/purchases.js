@@ -15,9 +15,15 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Shop name and items required' });
     }
 
+    // Validate items have a name
+    const validItems = items.filter(item => item.name && item.name.trim() !== '');
+    if (validItems.length === 0) {
+      return res.status(400).json({ error: 'At least one item with a name is required' });
+    }
+
     // Calculate total
-    const totalAmount = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-    const itemCount = items.length;
+    const totalAmount = validItems.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+    const itemCount = validItems.length;
 
     // Insert purchase
     const result = run(
@@ -27,10 +33,16 @@ router.post('/', (req, res) => {
 
     const purchaseId = result.lastInsertRowid;
 
-    // Insert items
-    const stmt = "INSERT INTO purchase_items (purchase_id, item_name, amount) VALUES (?, ?, ?)";
-    items.forEach(item => {
-      run(stmt, [purchaseId, item.name, parseFloat(item.amount || 0)]);
+    // Insert items with qty and nos
+    const stmt = "INSERT INTO purchase_items (purchase_id, item_name, qty, nos, amount) VALUES (?, ?, ?, ?, ?)";
+    validItems.forEach(item => {
+      run(stmt, [
+        purchaseId,
+        item.name.trim(),
+        parseFloat(item.qty || 0),
+        parseInt(item.nos || 0),
+        parseFloat(item.amount || 0)
+      ]);
     });
 
     return res.json({ 
@@ -42,7 +54,7 @@ router.post('/', (req, res) => {
     });
   } catch (err) {
     console.error('Error creating purchase:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -51,12 +63,9 @@ router.get('/', (req, res) => {
   try {
     const { filter } = req.query;
     let whereClause = '';
-    let params = [];
+    const params = [];
 
     if (filter) {
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      
       switch (filter) {
         case 'today':
           whereClause = "WHERE DATE(created_at) = DATE('now','localtime')";
@@ -75,19 +84,19 @@ router.get('/', (req, res) => {
 
     const purchases = query(`SELECT * FROM purchases ${whereClause} ORDER BY created_at DESC`, params);
     
-    // Fetch items for each purchase
+    // Fetch items for each purchase (including qty and nos)
     const purchasesWithItems = purchases.map(p => {
-      const items = query("SELECT item_name, amount FROM purchase_items WHERE purchase_id = ?", [p.id]);
-      return {
-        ...p,
-        items: items
-      };
+      const items = query(
+        "SELECT item_name, qty, nos, amount FROM purchase_items WHERE purchase_id = ?",
+        [p.id]
+      );
+      return { ...p, items };
     });
 
     return res.json({ success: true, purchases: purchasesWithItems });
   } catch (err) {
     console.error('Error fetching purchases:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -97,18 +106,18 @@ router.get('/:id', (req, res) => {
     const purchase = get("SELECT * FROM purchases WHERE id = ?", [req.params.id]);
     
     if (!purchase) {
-      return res.status(404).json({ error: 'Purchase not found' });
+      return res.status(404).json({ success: false, error: 'Purchase not found' });
     }
 
-    const items = query("SELECT item_name, amount FROM purchase_items WHERE purchase_id = ?", [purchase.id]);
+    const items = query(
+      "SELECT item_name, qty, nos, amount FROM purchase_items WHERE purchase_id = ?",
+      [purchase.id]
+    );
     
-    return res.json({ 
-      success: true, 
-      purchase: { ...purchase, items } 
-    });
+    return res.json({ success: true, purchase: { ...purchase, items } });
   } catch (err) {
     console.error('Error fetching purchase:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -118,7 +127,7 @@ router.delete('/:id', (req, res) => {
     const purchase = get("SELECT * FROM purchases WHERE id = ?", [req.params.id]);
     
     if (!purchase) {
-      return res.status(404).json({ error: 'Purchase not found' });
+      return res.status(404).json({ success: false, error: 'Purchase not found' });
     }
 
     // Delete items first (FK constraint)
@@ -130,7 +139,7 @@ router.delete('/:id', (req, res) => {
     return res.json({ success: true, message: 'Purchase deleted' });
   } catch (err) {
     console.error('Error deleting purchase:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -142,17 +151,23 @@ router.put('/:id', (req, res) => {
     const purchaseId = req.params.id;
     
     if (!shopName || !items || items.length === 0) {
-      return res.status(400).json({ error: 'Shop name and items required' });
+      return res.status(400).json({ success: false, error: 'Shop name and items required' });
     }
 
     const purchase = get("SELECT * FROM purchases WHERE id = ?", [purchaseId]);
     if (!purchase) {
-      return res.status(404).json({ error: 'Purchase not found' });
+      return res.status(404).json({ success: false, error: 'Purchase not found' });
+    }
+
+    // Filter valid items
+    const validItems = items.filter(item => item.name && item.name.trim() !== '');
+    if (validItems.length === 0) {
+      return res.status(400).json({ success: false, error: 'At least one item with a name is required' });
     }
 
     // Calculate new total
-    const totalAmount = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-    const itemCount = items.length;
+    const totalAmount = validItems.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+    const itemCount = validItems.length;
 
     // Update purchase
     run(
@@ -165,10 +180,16 @@ router.put('/:id', (req, res) => {
     // Delete old items
     run("DELETE FROM purchase_items WHERE purchase_id = ?", [purchaseId]);
 
-    // Insert new items
-    const stmt = "INSERT INTO purchase_items (purchase_id, item_name, amount) VALUES (?, ?, ?)";
-    items.forEach(item => {
-      run(stmt, [purchaseId, item.name, parseFloat(item.amount || 0)]);
+    // Insert new items with qty and nos
+    const stmt = "INSERT INTO purchase_items (purchase_id, item_name, qty, nos, amount) VALUES (?, ?, ?, ?, ?)";
+    validItems.forEach(item => {
+      run(stmt, [
+        purchaseId,
+        item.name.trim(),
+        parseFloat(item.qty || 0),
+        parseInt(item.nos || 0),
+        parseFloat(item.amount || 0)
+      ]);
     });
 
     return res.json({ 
@@ -181,7 +202,7 @@ router.put('/:id', (req, res) => {
     });
   } catch (err) {
     console.error('Error updating purchase:', err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

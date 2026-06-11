@@ -312,7 +312,7 @@
 <script>
   /* ── Apply saved theme IMMEDIATELY (prevents flash) ── */
   (function() {
-    var theme = localStorage.getItem('ayini_theme') || 'dark';
+    var theme = localStorage.getItem('ayini_theme') || 'light';
     document.documentElement.setAttribute('data-theme', theme);
   })();
 </script>
@@ -394,13 +394,13 @@
     <div class="toggle-group">
       <span class="toggle-label">Appearance</span>
       <div class="toggle-switch">
-        <button class="toggle-btn active" data-theme="dark" onclick="setTheme('dark')">🌙 Dark</button>
-        <button class="toggle-btn" data-theme="light" onclick="setTheme('light')">☀️ Light</button>
+        <button class="toggle-btn" data-theme="dark" onclick="setTheme('dark')">🌙 Dark</button>
+        <button class="toggle-btn active" data-theme="light" onclick="setTheme('light')">☀️ Light</button>
       </div>
     </div>
     <div class="info-box">
       <strong>Note</strong>
-      Theme changes apply immediately to your current session. Refresh the page to see changes across all tabs.
+      Theme changes apply immediately and persist across all pages and after refreshing the app.
     </div>
   </div>
 
@@ -432,13 +432,13 @@
 <script src="api.js"></script>
 <script>
   let originalSettings = {};
-  let currentTheme = 'dark';
-  let currentView = 'grid';
+  let currentTheme = 'light';
+  let currentView = 'list';
 
   // Initialize
   window.addEventListener('load', () => {
     // Apply saved theme & view immediately (before API responds)
-    const savedTheme = localStorage.getItem('ayini_theme') || 'dark';
+    const savedTheme = localStorage.getItem('ayini_theme') || 'light';
     const savedView  = localStorage.getItem('ayini_view')  || 'list';
     document.documentElement.setAttribute('data-theme', savedTheme);
     currentTheme = savedTheme;
@@ -481,8 +481,8 @@
         document.getElementById('gstSlider').value = settings.gst_rate || 0;
         updateGstDisplay();
 
-        setTheme(settings.theme_mode || 'dark', true);
-        setProductView(settings.product_view || 'grid', true);
+        setTheme(settings.theme_mode || 'light', true);
+        setProductView(settings.product_view || 'list', true);
       }
     }, (err) => {
       showAlert('Error loading settings: ' + err, 'error');
@@ -578,6 +578,7 @@
         originalSettings = JSON.parse(JSON.stringify(data.settings || payload));
         
         // Trigger updates on billing page via localStorage
+        localStorage.setItem('ayini_gst_rate', String(gstRate));
         localStorage.setItem('ayini_gst_rate_updated', Date.now().toString());
         localStorage.setItem('ayini_view_updated', Date.now().toString());
         

@@ -137,6 +137,8 @@ async function initDB() {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       purchase_id INTEGER NOT NULL,
       item_name   TEXT NOT NULL,
+      qty         REAL DEFAULT 0,
+      nos         INTEGER DEFAULT 0,
       amount      REAL NOT NULL,
       FOREIGN KEY(purchase_id) REFERENCES purchases(id) ON DELETE CASCADE
     )
@@ -149,7 +151,7 @@ async function initDB() {
       shop_name       TEXT DEFAULT 'Ayini Home Products',
       gstin_number    TEXT DEFAULT '',
       gst_rate        REAL DEFAULT 0,
-      theme_mode      TEXT DEFAULT 'dark',
+      theme_mode      TEXT DEFAULT 'light',
       product_view    TEXT DEFAULT 'grid',
       updated_at      TEXT DEFAULT (datetime('now','localtime'))
     )
@@ -161,7 +163,9 @@ async function initDB() {
     "ALTER TABLE bills ADD COLUMN cgst_amount REAL DEFAULT 0",
     "ALTER TABLE bills ADD COLUMN sgst_amount REAL DEFAULT 0",
     "ALTER TABLE purchases ADD COLUMN item_count INTEGER DEFAULT 0",
-    "ALTER TABLE settings ADD COLUMN product_view TEXT DEFAULT 'grid'",
+    "ALTER TABLE purchase_items ADD COLUMN qty REAL DEFAULT 0",
+    "ALTER TABLE purchase_items ADD COLUMN nos INTEGER DEFAULT 0",
+    "ALTER TABLE settings ADD COLUMN product_view TEXT DEFAULT 'list'",
   ];
   migrations.forEach(sql => {
     try { db.run(sql); } catch(e) { /* column already exists — skip */ }
@@ -189,7 +193,7 @@ async function initDB() {
   const settingsCheck = db.exec("SELECT id FROM settings WHERE id=1");
   if (!settingsCheck[0]) {
     db.run("INSERT INTO settings (id, shop_name, gstin_number, gst_rate, theme_mode, product_view) VALUES (1, ?, ?, ?, ?, ?)", 
-      ['Ayini Home Products', '', 0, 'dark', 'grid']);
+      ['Ayini Home Products', '', 0, 'light', 'list']);
     console.log('✓ Default settings initialized');
   }
 

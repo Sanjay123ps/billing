@@ -53,7 +53,7 @@ router.put('/', (req, res) => {
            product_view = ?,
            updated_at = datetime('now','localtime')
        WHERE id = 1`,
-      [shopName || 'Ayini Home Products', gstinNumber || '', gst, themeMode || 'dark', productView || 'grid']
+      [shopName || 'Ayini Home Products', gstinNumber || '', gst, themeMode || 'dark', productView || 'list']
     );
 
     const updatedSettings = get("SELECT * FROM settings WHERE id = 1");
