@@ -134,4 +134,55 @@ router.delete('/:id', (req, res) => {
   }
 });
 
+
+// PUT /api/purchases/:id - Update purchase
+router.put('/:id', (req, res) => {
+  try {
+    const { shopName, items } = req.body;
+    const purchaseId = req.params.id;
+    
+    if (!shopName || !items || items.length === 0) {
+      return res.status(400).json({ error: 'Shop name and items required' });
+    }
+
+    const purchase = get("SELECT * FROM purchases WHERE id = ?", [purchaseId]);
+    if (!purchase) {
+      return res.status(404).json({ error: 'Purchase not found' });
+    }
+
+    // Calculate new total
+    const totalAmount = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+    const itemCount = items.length;
+
+    // Update purchase
+    run(
+      `UPDATE purchases 
+       SET shop_name = ?, total_amount = ?, item_count = ?, updated_at = datetime('now','localtime')
+       WHERE id = ?`,
+      [shopName, totalAmount, itemCount, purchaseId]
+    );
+
+    // Delete old items
+    run("DELETE FROM purchase_items WHERE purchase_id = ?", [purchaseId]);
+
+    // Insert new items
+    const stmt = "INSERT INTO purchase_items (purchase_id, item_name, amount) VALUES (?, ?, ?)";
+    items.forEach(item => {
+      run(stmt, [purchaseId, item.name, parseFloat(item.amount || 0)]);
+    });
+
+    return res.json({ 
+      success: true, 
+      message: 'Purchase updated successfully',
+      purchase_id: purchaseId,
+      shop_name: shopName,
+      total_amount: totalAmount,
+      item_count: itemCount
+    });
+  } catch (err) {
+    console.error('Error updating purchase:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

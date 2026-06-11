@@ -20,7 +20,7 @@ router.get('/', (req, res) => {
           gstin_number: '',
           gst_rate: 0,
           theme_mode: 'dark',
-          product_view: 'grid'
+          product_view: 'list'
         }
       });
     }
