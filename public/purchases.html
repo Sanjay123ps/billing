@@ -406,6 +406,7 @@
 <script>
   let currentFilter = 'all';
   let items = [];
+  let editingPurchaseId = null;
 
   // Initialize
   window.addEventListener('load', () => {
@@ -472,7 +473,8 @@
           <td><span style="background: var(--green-50); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; color: var(--green-800);">${p.item_count} items</span></td>
           <td><span class="purchase-amount">₹${parseFloat(p.total_amount).toFixed(2)}</span></td>
           <td style="text-align: center;">
-            <button onclick="deletePurchase(${p.id})" style="background: none; border: none; color: var(--red-600); cursor: pointer; font-size: 14px; padding: 4px 8px;">🗑️ Delete</button>
+            <button onclick="openPurchaseModal(${p.id})" style="background: none; border: none; color: var(--green-700); cursor: pointer; font-size: 14px; padding: 4px 8px; margin-right: 4px;" title="Edit">✏️ Edit</button>
+            <button onclick="deletePurchase(${p.id})" style="background: none; border: none; color: var(--red-600); cursor: pointer; font-size: 14px; padding: 4px 8px;" title="Delete">🗑️ Delete</button>
           </td>
         </tr>`;
     }).join('');
@@ -497,40 +499,83 @@
     loadPurchases();
   }
 
-  // Open modal
-  function openPurchaseModal() {
-    items = [{ name: '', amount: 0 }];
-    renderItemRows();
-    document.getElementById('shopName').value = '';
-    document.getElementById('purchaseModal').classList.add('open');
+  // Open modal (new or edit)
+  function openPurchaseModal(purchaseId = null) {
+    editingPurchaseId = purchaseId;
+    const modalTitle = document.getElementById('purchaseModalTitle');
+    const saveBtn = document.getElementById('savePurchaseBtn');
+    
+    if (purchaseId) {
+      // Load purchase for editing
+      API.get(`/api/purchases/${purchaseId}`, (data) => {
+        if (data.success && data.purchase) {
+          const p = data.purchase;
+          modalTitle.textContent = 'Edit Purchase';
+          saveBtn.textContent = 'Update Purchase';
+          document.getElementById('shopName').value = p.shop_name;
+          
+          // Convert items to new format with qty and nos
+          items = p.items.map(i => ({
+            name: i.item_name,
+            amount: i.amount,
+            qty: 0,
+            nos: 0
+          }));
+          
+          renderItemRows();
+          document.getElementById('purchaseModal').classList.add('open');
+        } else {
+          showAlert('Failed to load purchase for editing', 'error');
+        }
+      }, (err) => {
+        showAlert('Error loading purchase: ' + err, 'error');
+      });
+    } else {
+      // New purchase
+      modalTitle.textContent = 'New Purchase';
+      saveBtn.textContent = 'Save Purchase';
+      items = [{ name: '', amount: 0, qty: 0, nos: 0 }];
+      renderItemRows();
+      document.getElementById('shopName').value = '';
+      document.getElementById('purchaseModal').classList.add('open');
+    }
   }
 
   // Close modal
   function closePurchaseModal() {
+    editingPurchaseId = null;
     document.getElementById('purchaseModal').classList.remove('open');
   }
 
   // Add item row
   function addItemRow() {
-    items.push({ name: '', amount: 0 });
+    items.push({ name: '', amount: 0, qty: 0, nos: 0 });
     renderItemRows();
   }
 
   // Remove item row
   function removeItemRow(idx) {
     items.splice(idx, 1);
-    if (items.length === 0) items.push({ name: '', amount: 0 });
+    if (items.length === 0) items.push({ name: '', amount: 0, qty: 0, nos: 0 });
     renderItemRows();
   }
 
-  // Render item rows
+  // Render item rows with Qty and Nos fields
   function renderItemRows() {
     const container = document.getElementById('itemsContainer');
     container.innerHTML = items.map((item, idx) => `
       <div class="item-row">
         <input type="text" placeholder="Item name (e.g. White Eggs)" 
           value="${item.name}" 
-          onchange="items[${idx}].name = this.value" 
+          onchange="items[${idx}].name = this.value; updateTotal();" 
+          class="form-input" />
+        <input type="number" placeholder="Qty" min="0" step="0.01"
+          value="${item.qty || ''}" 
+          onchange="items[${idx}].qty = parseFloat(this.value || 0); updateTotal();" 
+          class="form-input" />
+        <input type="number" placeholder="Nos" min="0" step="1"
+          value="${item.nos || ''}" 
+          onchange="items[${idx}].nos = parseInt(this.value || 0); updateTotal();" 
           class="form-input" />
         <input type="number" placeholder="₹0" min="0" step="0.01"
           value="${item.amount}" 
@@ -547,7 +592,7 @@
     document.getElementById('totalAmount').textContent = '₹' + total.toFixed(2);
   }
 
-  // Save purchase with improved error handling
+  // Save or update purchase
   function savePurchase() {
     const shopName = document.getElementById('shopName').value.trim();
     const btn = document.getElementById('savePurchaseBtn');
@@ -565,19 +610,23 @@
 
     // Disable button during save
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.textContent = editingPurchaseId ? 'Updating...' : 'Saving...';
 
     const payload = {
       shopName: shopName,
       items: validItems
     };
 
-    API.post('/api/purchases', payload, (data) => {
+    // Determine if POST (create) or PUT (update)
+    const isUpdate = editingPurchaseId !== null;
+    const url = isUpdate ? `/api/purchases/${editingPurchaseId}` : '/api/purchases';
+
+    const successHandler = (data) => {
       btn.disabled = false;
-      btn.textContent = 'Save Purchase';
+      btn.textContent = editingPurchaseId ? 'Update Purchase' : 'Save Purchase';
       
       if (data.success) {
-        showAlert('✓ Purchase saved successfully!', 'success');
+        showAlert(`✓ Purchase ${editingPurchaseId ? 'updated' : 'saved'} successfully!`, 'success');
         setTimeout(() => {
           closePurchaseModal();
           loadPurchases();
@@ -585,12 +634,20 @@
       } else {
         showAlert('Failed to save purchase. Please try again.', 'error');
       }
-    }, (err) => {
+    };
+
+    const errorHandler = (err) => {
       btn.disabled = false;
-      btn.textContent = 'Save Purchase';
+      btn.textContent = editingPurchaseId ? 'Update Purchase' : 'Save Purchase';
       showAlert('Error saving purchase: ' + (err.message || err), 'error');
       console.error('Save purchase error:', err);
-    });
+    };
+
+    if (isUpdate) {
+      API.put(url, payload, successHandler, errorHandler);
+    } else {
+      API.post(url, payload, successHandler, errorHandler);
+    }
   }
 
   // Delete purchase

@@ -409,12 +409,12 @@
     <h2 class="section-title">Product Display Style</h2>
     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Choose how products appear on the billing page</p>
     <div class="view-options">
-      <div class="view-option active" data-view="grid" onclick="setProductView('grid')">
+      <div class="view-option" data-view="grid" onclick="setProductView('grid')">
         <div class="view-option-icon">⚙️</div>
         <div class="view-option-label">Grid View</div>
         <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Products as cards</div>
       </div>
-      <div class="view-option" data-view="list" onclick="setProductView('list')">
+      <div class="view-option active" data-view="list" onclick="setProductView('list')">
         <div class="view-option-icon">📋</div>
         <div class="view-option-label">List View</div>
         <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Products in a table</div>
@@ -439,7 +439,7 @@
   window.addEventListener('load', () => {
     // Apply saved theme & view immediately (before API responds)
     const savedTheme = localStorage.getItem('ayini_theme') || 'dark';
-    const savedView  = localStorage.getItem('ayini_view')  || 'grid';
+    const savedView  = localStorage.getItem('ayini_view')  || 'list';
     document.documentElement.setAttribute('data-theme', savedTheme);
     currentTheme = savedTheme;
     currentView  = savedView;
@@ -508,6 +508,8 @@
     document.documentElement.setAttribute('data-theme', mode);
     // Save to localStorage so ALL pages pick it up
     localStorage.setItem('ayini_theme', mode);
+    // Trigger sync across all pages
+    localStorage.setItem('ayini_theme_sync', Date.now().toString());
 
     if (!silent) {
       showAlert(`✓ Theme changed to ${mode} mode`, 'success');
@@ -574,6 +576,11 @@
 
       if (data.success) {
         originalSettings = JSON.parse(JSON.stringify(data.settings || payload));
+        
+        // Trigger updates on billing page via localStorage
+        localStorage.setItem('ayini_gst_rate_updated', Date.now().toString());
+        localStorage.setItem('ayini_view_updated', Date.now().toString());
+        
         showAlert('✓ Settings updated successfully!', 'success');
       } else {
         showAlert('Failed to update settings. Please try again.', 'error');

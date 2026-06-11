@@ -166,3 +166,11 @@ const API = {
       .catch(err => onError ? onError(err) : console.error(err));
   },
 };
+
+
+// ===== GLOBAL THEME INITIALIZER =====
+// Apply theme BEFORE DOM renders to prevent flashing
+(function() {
+  const savedTheme = localStorage.getItem('ayini_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+})();

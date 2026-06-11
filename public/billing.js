@@ -71,6 +71,43 @@ function addGrindingService(type, weightKg) {
 }
 
 
+
+// Load GST rate from settings
+async function loadGstRateFromSettings() {
+  try {
+    const response = await fetch('/api/settings');
+    const data = await response.json();
+    if (data.success && data.settings) {
+      const gstRate = data.settings.gst_rate;
+      const gstDropdown = document.getElementById('gstRate');
+      
+      if (gstDropdown) {
+        // Check if the GST rate is in the dropdown options
+        const hasOption = Array.from(gstDropdown.options).some(o => o.value === String(gstRate));
+        
+        if (hasOption) {
+          gstDropdown.value = String(gstRate);
+        } else {
+          // Use custom option
+          gstDropdown.value = 'custom';
+          const customInput = document.getElementById('customGst');
+          if (customInput) {
+            customInput.value = gstRate;
+            customInput.style.display = 'block';
+          }
+        }
+        
+        // Recalculate bill with new GST
+        if (typeof recalc === 'function') {
+          recalc();
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load GST from settings:', e);
+  }
+}
+
 async function init() {
   requireAuth();
   try {
@@ -86,6 +123,7 @@ async function init() {
     document.getElementById('codeInput')?.focus();
     setActionLock(true); // lock Process Payment & Print until WhatsApp sent
     initGrindingPanel();
+    await loadGstRateFromSettings();
   } catch(e) {
     showToast('Failed to load products');
   }
@@ -436,7 +474,7 @@ function buildReceiptHTML() {
 
 <div class="center">
   <div class="brand-en">🌿 ${SHOP_NAME}</div>
-  <div class="brand-ta">அயினி வீட்டு பொருட்கள்</div>
+  <div class="brand-ta">அயினி ஹோம்  ப்ராடக்ட்ஸ்</div>
   <div class="addr">${SHOP_ADDR1}<br>${SHOP_ADDR2}</div>
   <div class="addr">${SHOP_PHONE}</div>
 </div>
@@ -679,3 +717,37 @@ function addGrindingToBill() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ===== EVENT LISTENERS FOR SETTINGS SYNC =====
+
+// Listen for GST rate changes from settings page
+window.addEventListener('storage', (e) => {
+  if (e.key === 'ayini_gst_rate_updated') {
+    loadGstRateFromSettings();
+  }
+  if (e.key === 'ayini_theme') {
+    const newTheme = e.newValue || 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+  }
+  if (e.key === 'ayini_theme_sync') {
+    const savedTheme = localStorage.getItem('ayini_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }
+  if (e.key === 'ayini_view_updated') {
+    const savedView = localStorage.getItem('ayini_view') || 'list';
+    const grid = document.getElementById('productGrid');
+    if (grid) {
+      if (savedView === 'list') {
+        grid.classList.add('list-view');
+      } else {
+        grid.classList.remove('list-view');
+      }
+    }
+  }
+});
+
+// Apply theme on page load
+(function() {
+  const savedTheme = localStorage.getItem('ayini_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+})();
