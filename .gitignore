@@ -1,0 +1,67 @@
+# ===== DATABASE =====
+*.db
+ayini.db
+*.sqlite
+*.sqlite3
+
+# ===== DEPENDENCIES =====
+node_modules/
+package-lock.json
+yarn.lock
+
+# ===== BUILD & DIST =====
+dist/
+out/
+build/
+
+# ===== ENVIRONMENT & SECRETS =====
+.env
+.env.local
+.env.production
+.env.*.local
+
+# ===== IDE & EDITOR =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== OS =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# ===== LOGS =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== TEMP & CACHE =====
+.cache/
+tmp/
+temp/
+*.tmp
+
+# ===== CAPACITOR & MOBILE =====
+.capacitor/
+dist-mobile/
+
+# ===== EXPO (if using React Native) =====
+.expo/
+.expo-shared/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
